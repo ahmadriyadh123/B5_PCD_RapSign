@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:logbook_app_001/features/auth/login_controller.dart';
 // import 'package:logbook_app_001/features/logbook/counter_view.dart';
-import 'package:logbook_app_001/features/logbook/log_view.dart';
+import 'package:logbook_app_001/features/home/home_page.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -67,11 +67,11 @@ class _LoginViewState extends State<LoginView> {
         _failedAttempts = 0;
       });
 
-      // Pindah ke LogView dengan data user lengkap
+      // Pindah ke HomePage dengan data user lengkap
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(
-          builder: (context) => LogView(
+          builder: (context) => HomePage(
             username: username,
             teamId: userData['teamId'] as String? ?? '1',
             role: userData['role'] as String? ?? 'Anggota',
