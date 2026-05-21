@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:logbook_app_001/features/logbook/log_view.dart';
 import 'package:logbook_app_001/features/legalitas/legalitas_view.dart';
+import 'package:logbook_app_001/features/signature/signature_preprocessing_view.dart';
 
 class HomePage extends StatefulWidget {
   final String username;
@@ -29,6 +30,7 @@ class _HomePageState extends State<HomePage> {
     _pages = [
       LogView(username: widget.username, teamId: widget.teamId, role: widget.role),
       const LegalitasView(),
+      const SignaturePreprocessingView(),
     ];
   }
 
@@ -47,6 +49,10 @@ class _HomePageState extends State<HomePage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.verified),
             label: 'Legalitas',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.draw),
+            label: 'Tanda Tangan',
           ),
         ],
       ),
