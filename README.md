@@ -806,3 +806,4 @@ Pada praktikum ini, prinsip **Single Responsibility Principle (SRP)** diterapkan
 Dengan pemisahan ini, setiap komponen memiliki **satu alasan untuk berubah**, sehingga kode lebih **mudah dipelihara, diuji, dan dikembangkan**.
 
 ---
+# B5_PCD_RapSign
