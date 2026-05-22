@@ -1,0 +1,1181 @@
+Bagian 1 — Ideation & Problem–Solution Fit
+1. Latar Belakang Masalah
+Dalam kegiatan organisasi, terutama pada rapat formal, sering digunakan dokumen digital seperti berita acara, surat keputusan, atau lembar persetujuan yang memerlukan tanda tangan sebagai bentuk validasi. Namun, penggunaan tanda tangan digital berbentuk gambar masih memiliki celah pemalsuan, misalnya:
+Menyalin tanda tangan dari dokumen lain.
+Mengedit tanda tangan menggunakan aplikasi desain.
+Menggunakan tanda tangan orang lain tanpa izin.
+Akibatnya, keaslian dokumen menjadi sulit dipastikan dan dapat menimbulkan masalah administratif maupun penyalahgunaan identitas.
+Karena itu, diperlukan sistem yang mampu melakukan verifikasi keaslian tanda tangan secara otomatis menggunakan pendekatan Pengolahan Citra Digital (PCD) dan Machine Learning (ML).
+2. Domain dan Fokus Permasalahan
+Domain
+Bidang yang dipilih adalah:
+Edukasi
+Organisasi
+Karena sistem akan digunakan untuk membantu proses administrasi dan validasi dokumen rapat organisasi mahasiswa, komunitas, maupun lembaga pendidikan.
+Masalah Utama
+Permasalahan utama yang diangkat adalah:
+“Bagaimana memverifikasi keaslian tanda tangan digital pada dokumen rapat organisasi untuk mencegah pemalsuan?”
+Masalah ini dipilih karena:
+Proses verifikasi manual memerlukan waktu.
+Pengurus organisasi sering tidak dapat memastikan tanda tangan asli atau palsu.
+Dokumen digital semakin sering digunakan dibanding dokumen fisik.
+3. Solusi yang Diusulkan
+Solusi yang dirancang adalah aplikasi berbasis mobile yang dapat:
+Mengambil gambar tanda tangan dari dokumen.
+Melakukan preprocessing citra menggunakan teknik PCD.
+Mengekstraksi pola tekstur dan kontur tanda tangan.
+Membandingkan pola tersebut menggunakan model Machine Learning.
+Memberikan hasil validasi secara real-time:
+Valid
+Tidak valid
+Sistem akan membantu pengguna mengetahui apakah tanda tangan pada dokumen sesuai dengan data referensi yang tersimpan.
+4. Hubungan dengan Proyek Sebelumnya (Inheritance Proyek 4)
+Pada Modul 5, sistem tidak dibuat dari nol, tetapi melanjutkan struktur proyek sebelumnya agar pengembangan lebih efisien.
+Komponen yang dipertahankan:
+a. Sistem Otentikasi Pengguna
+Digunakan untuk:
+Login pengguna.
+Hak akses pengguna.
+Identitas pemilik tanda tangan.
+Contoh:
+Ketua organisasi memiliki akun tersendiri.
+Hanya akun tertentu yang dapat melakukan validasi.
+b. Database Lokal Hive
+Hive tetap digunakan karena:
+Ringan untuk aplikasi Flutter.
+Cepat untuk penyimpanan lokal.
+Dapat menyimpan log hasil verifikasi.
+Data yang disimpan:
+Riwayat pemeriksaan.
+Status validasi.
+Timestamp pemeriksaan.
+c. Fitur Kolaborasi Antar Pengguna
+Fitur ini dipertahankan agar:
+Banyak pengguna dapat mengakses sistem.
+Data validasi dapat dibagikan.
+Riwayat pemeriksaan dapat dipantau bersama.
+Contoh:
+Sekretaris mengunggah dokumen.
+Ketua memverifikasi.
+Anggota lain melihat hasil validasi.
+5. Target Sensorik
+Jenis Objek
+Sistem berfokus pada:
+Objek statis berupa citra tanda tangan.
+Artinya input sistem bukan video atau objek bergerak, melainkan gambar tanda tangan dari dokumen digital.
+Karakteristik Citra yang Dianalisis
+Model akan mempelajari:
+a. Tekstur
+Meliputi:
+Ketebalan garis.
+Kepadatan tinta.
+Pola goresan.
+b. Kontur
+Meliputi:
+Bentuk lengkungan.
+Pola tepi tanda tangan.
+Struktur garis unik.
+Kontur penting karena setiap orang memiliki pola tanda tangan berbeda.
+6. Alur Konsep Sistem
+Secara umum, sistem bekerja dengan tahapan berikut:
+Pengguna mengunggah atau memfoto dokumen.
+Sistem mengambil area tanda tangan.
+Citra diproses menggunakan PCD:
+grayscale
+crop
+normalisasi
+Model ML melakukan inference.
+Sistem menentukan similarity score.
+Hasil ditampilkan ke pengguna.
+7. Nilai Inovasi Sistem
+Keunggulan sistem dibanding verifikasi manual:
+
+
+8. Problem–Solution Fit
+Kesesuaian Masalah dengan Solusi
+Masalah:
+Sulit memvalidasi tanda tangan digital secara manual.
+Solusi:
+Sistem PCD + ML mampu mengenali pola tanda tangan secara otomatis.
+Mengapa ML Cocok?
+Karena tanda tangan memiliki:
+Pola unik.
+Variasi bentuk.
+Karakteristik visual kompleks.
+Machine Learning dapat mempelajari pola tersebut lebih baik dibanding aturan biasa.
+Mengapa PCD Diperlukan?
+Karena model ML membutuhkan citra yang:
+Bersih.
+Konsisten.
+Terstruktur.
+PCD membantu meningkatkan kualitas input sebelum inference dilakukan.
+9. Output yang Diharapkan
+Sistem menghasilkan:
+Status:
+Valid
+Invalid
+Similarity score:
+contoh: 92%
+Visual feedback:
+bounding box hijau/merah
+Penyimpanan log otomatis:
+lokal (Hive)
+cloud (MongoDB Atlas)
+10. Kesimpulan Bagian 1
+Pada tahap ideation, kelompok berhasil menentukan bahwa permasalahan validasi keaslian tanda tangan digital merupakan kasus yang relevan di lingkungan organisasi dan edukasi. Solusi yang dipilih memanfaatkan Pengolahan Citra Digital dan Machine Learning untuk melakukan analisis tekstur dan kontur tanda tangan secara otomatis.
+Sistem juga tetap mempertahankan fitur utama dari proyek sebelumnya seperti autentikasi pengguna, database Hive, dan kolaborasi pengguna sehingga pengembangan dapat dilakukan secara modular dan terintegrasi.
+
+Bagian 2 — Deep Dive PCD & ML Pipeline
+1. Gambaran Umum Pipeline
+Pada tahap ini, sistem mulai masuk ke proses teknis pengolahan citra digital (PCD) dan Machine Learning (ML). Fokus utama bagian ini adalah bagaimana gambar tanda tangan diproses sebelum dikirim ke model ML agar hasil prediksi lebih akurat dan konsisten.
+Pipeline sistem secara umum:
+Input Citra
+    ↓
+Preprocessing PCD
+    ↓
+Ekstraksi Fitur
+    ↓
+ML Inference
+    ↓
+Similarity Scoring
+    ↓
+Mapping Koordinat
+    ↓
+UI Overlay
+2. Tahapan PCD Sebelum Inference
+Sebelum model ML melakukan prediksi, citra tanda tangan harus diproses terlebih dahulu agar memiliki format yang seragam.
+3. Konversi ke Grayscale
+Tujuan
+Mengubah citra berwarna menjadi citra abu-abu untuk:
+Mengurangi kompleksitas data.
+Memfokuskan model pada bentuk tanda tangan.
+Mengurangi pengaruh warna latar belakang.
+Mengapa Grayscale Penting?
+Model tidak membutuhkan informasi warna karena:
+Tanda tangan lebih bergantung pada pola garis.
+Warna tinta tidak terlalu memengaruhi identitas tanda tangan.
+Dengan grayscale:
+Dimensi data lebih kecil.
+Proses inference lebih cepat.
+Konsumsi memori lebih rendah.
+Konsep Perubahan
+Dari:
+RGB (3 channel)
+Menjadi:
+Grayscale (1 channel)
+Dampak ke Sistem
+Keuntungan:
+Efisiensi komputasi meningkat.
+Training lebih stabil.
+Noise warna berkurang.
+4. Normalisasi Piksel
+Tujuan
+Mengubah rentang nilai piksel dari:
+0 – 255
+Menjadi:
+0.0 – 1.0
+Rumus Normalisasi
+x_{normalized} = \frac{x}{255}
+Mengapa Diperlukan?
+Karena model neural network bekerja lebih stabil jika:
+Data berada pada rentang kecil.
+Variasi numerik tidak terlalu besar.
+Dampak Positif
+Mengurangi exploding gradient.
+Mempercepat konvergensi model.
+Prediksi menjadi lebih konsisten.
+5. Center Crop
+Tujuan
+Menjaga rasio dan posisi tanda tangan agar konsisten.
+Masalah yang sering terjadi:
+Tanda tangan terlalu kecil.
+Tanda tangan bergeser ke samping.
+Banyak area kosong.
+Center crop membantu mengambil area inti tanda tangan.
+Mekanisme
+Sistem:
+Menentukan area tengah gambar.
+Memotong area yang tidak penting.
+Menjaga fokus pada objek utama.
+Dampak ke ML
+Tanpa crop:
+Model sulit fokus.
+Banyak noise.
+Dengan crop:
+Fitur lebih jelas.
+Akurasi meningkat.
+6. Resize ke Ukuran Input Model
+Setelah crop, gambar diubah ukurannya agar sesuai dengan ukuran input model.
+Contoh:
+320 × 320
+atau
+224 × 224
+Mengapa Harus Konsisten?
+Model ML membutuhkan dimensi tetap karena:
+Struktur tensor harus sama.
+Layer CNN memiliki ukuran input tertentu.
+7. Ekstraksi Fitur Tekstur dan Kontur
+Setelah preprocessing selesai, sistem mulai mengambil karakteristik tanda tangan.
+a. Fitur Tekstur
+Digunakan untuk menganalisis:
+Ketebalan tinta.
+Kepadatan goresan.
+Pola distribusi piksel.
+Contoh fitur:
+Local Binary Pattern (LBP)
+Histogram tekstur
+b. Fitur Kontur
+Digunakan untuk:
+Mengenali bentuk unik.
+Mengidentifikasi pola lengkungan.
+Mendeteksi struktur garis.
+Teknik yang digunakan:
+Edge Detection
+Contour Extraction
+8. Main Isolate vs Background Isolate
+Pada Flutter, proses berat tidak boleh dijalankan di UI thread karena dapat menyebabkan lag.
+Karena itu sistem membagi proses menjadi dua isolate.
+9. Main Isolate
+Fungsi
+Menangani:
+Rendering UI.
+Menampilkan kamera.
+Overlay bounding box.
+Interaksi pengguna.
+Tanggung Jawab
+Main isolate fokus pada:
+Responsivitas aplikasi.
+Tampilan real-time.
+Animasi dan feedback visual.
+Komponen yang Berjalan
+Contoh:
+Camera preview
+Status indicator
+Vibrasi
+Overlay hasil deteksi
+10. Background Isolate
+Fungsi
+Menjalankan proses berat seperti:
+Konversi gambar.
+Preprocessing tensor.
+Ekstraksi fitur.
+ML inference.
+Mengapa Perlu Background Isolate?
+Karena proses image processing cukup berat dan dapat menyebabkan:
+Frame drop.
+UI freeze.
+Kamera tersendat.
+Dengan isolate:
+UI tetap lancar.
+Inference berjalan paralel.
+11. Alur Pemrosesan Antar Isolate
+Camera Frame
+      ↓
+Main Isolate
+      ↓
+Send Frame
+      ↓
+Background Isolate
+      ↓
+PCD + ML Inference
+      ↓
+Result
+      ↓
+Main Isolate
+      ↓
+Overlay UI
+12. Konversi CameraImage ke Tensor
+Model ML tidak dapat langsung membaca gambar kamera.
+Karena itu gambar harus diubah menjadi tensor.
+Bentuk Tensor
+Contoh:
+[1, 320, 320, 1]
+Penjelasan:
+1 = batch size
+320 × 320 = ukuran gambar
+1 = grayscale channel
+13. ML Inference
+Proses
+Tensor yang telah diproses dikirim ke model ML untuk:
+Membandingkan pola tanda tangan.
+Menghasilkan similarity score.
+Output Model
+Contoh:
+0.92
+Artinya:
+Tingkat kemiripan 92%.
+14. Threshold Similarity
+Sistem menentukan valid atau tidak berdasarkan threshold.
+Contoh:
+Threshold = 0.85
+Artinya:
+≥ 0.85 → valid
+< 0.85 → invalid
+15. Mapping Koordinat Hasil Deteksi
+Masalah umum:
+Ukuran model berbeda dengan ukuran layar HP.
+Contoh:
+Model: 320×320
+Layar HP: 1080×2400
+Karena itu koordinat hasil model harus ditransformasikan.
+16. Scaling Factor Ratio
+Sistem menghitung rasio skala agar bounding box tepat posisi.
+Rumus Scaling
+scale_x = \frac{screen\ width}{model\ width}
+scale_y = \frac{screen\ height}{model\ height}
+Contoh
+Jika:
+Model width = 320
+Screen width = 1080
+Maka:
+1080 / 320 = 3.375
+Semua koordinat bounding box dikalikan faktor tersebut.
+17. Overlay Bounding Box
+Setelah scaling selesai:
+Posisi tanda tangan ditampilkan di layar.
+Bounding box mengikuti hasil deteksi.
+Jenis warna:
+Hijau → valid
+Merah → tidak valid
+18. Tantangan Teknis
+a. Noise Dokumen
+Masalah:
+Bayangan kamera.
+Kertas kusut.
+Cahaya tidak merata.
+Solusi:
+Grayscale.
+Crop.
+Thresholding.
+b. Variasi Bentuk Tanda Tangan
+Masalah:
+Tekanan pena berbeda.
+Ukuran berubah.
+Sudut penulisan berubah.
+Solusi:
+Training dataset lebih banyak.
+Normalisasi ukuran.
+c. Latency
+Masalah:
+Inference lambat.
+Solusi:
+Background isolate.
+Resize input kecil.
+Tensor optimization.
+19. Diagram Pipeline Teknis
+Camera / Upload
+       ↓
+Grayscale
+       ↓
+Normalization
+       ↓
+Center Crop
+       ↓
+Resize
+       ↓
+Tensor Conversion
+       ↓
+Feature Extraction
+       ↓
+ML Inference
+       ↓
+Similarity Score
+       ↓
+Coordinate Scaling
+       ↓
+Overlay UI
+20. Kesimpulan Bagian 2
+Pada tahap Deep Dive PCD & ML Pipeline, sistem dirancang agar mampu melakukan preprocessing citra secara efisien sebelum inference dilakukan. Tahapan seperti grayscale, normalisasi, center crop, dan resize membantu menghasilkan input yang konsisten bagi model ML.
+Selain itu, penggunaan background isolate memungkinkan proses image processing berjalan tanpa mengganggu performa UI. Hasil inference kemudian dipetakan kembali ke ukuran layar menggunakan scaling factor sehingga overlay bounding box dapat tampil secara akurat pada perangkat pengguna.
+
+Bagian 3 — Arsitektur & Robustness
+1. Gambaran Umum Arsitektur Sistem
+Pada bagian ini, fokus utama bukan lagi hanya pada proses pengolahan citra dan ML, tetapi pada bagaimana sistem dirancang agar:
+Stabil,
+Mudah dikembangkan,
+Aman terhadap lifecycle aplikasi,
+Mudah dipelihara,
+Dan memiliki struktur kode yang scalable.
+Karena aplikasi melibatkan:
+kamera,
+machine learning,
+database lokal,
+sinkronisasi cloud,
+serta UI real-time,
+maka arsitektur yang baik menjadi sangat penting.
+2. Tujuan Perancangan Arsitektur
+Arsitektur sistem dirancang untuk:
+a. Memisahkan Tanggung Jawab
+Agar:
+UI tidak bercampur dengan logika ML,
+database tidak bercampur dengan tampilan,
+preprocessing tidak bercampur dengan controller.
+b. Mempermudah Maintenance
+Jika terjadi perubahan:
+model ML baru,
+perubahan threshold,
+perubahan database,
+maka bagian lain tidak perlu diubah secara besar-besaran.
+c. Menjaga Performa Aplikasi
+Karena aplikasi melakukan proses berat seperti:
+image processing,
+tensor conversion,
+inference,
+maka sistem harus tetap responsif.
+3. Penerapan Prinsip SOLID
+Sistem menerapkan prinsip SOLID agar struktur kode lebih modular dan maintainable.
+4. Single Responsibility Principle (SRP)
+Konsep
+Satu class hanya memiliki satu tanggung jawab utama.
+Implementasi
+Contoh Pemisahan
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Dampak Positif
+Kode lebih rapi.
+Bug lebih mudah dilacak.
+Pengembangan fitur lebih cepat.
+5. Open/Closed Principle (OCP)
+Konsep
+Class terbuka untuk pengembangan tetapi tertutup untuk modifikasi langsung.
+Implementasi
+Model ML dapat diganti tanpa mengubah keseluruhan sistem.
+Contoh:
+Awalnya menggunakan CNN.
+Kemudian ingin mengganti ke MobileNet.
+Cukup mengganti implementasi service inference.
+Contoh Struktur
+abstract class InferenceEngine
+ ├── CNNInference
+ └── MobileNetInference
+6. Liskov Substitution Principle (LSP)
+Konsep
+Subclass harus dapat menggantikan parent class tanpa merusak sistem.
+Implementasi
+Semua engine inference memiliki:
+method predict(),
+input tensor,
+output similarity score.
+Sehingga controller tidak peduli model apa yang digunakan.
+7. Interface Segregation Principle (ISP)
+Konsep
+Class tidak dipaksa menggunakan interface yang tidak dibutuhkan.
+Implementasi
+Dipisahkan:
+ImageProcessor
+DatabaseWriter
+FeedbackHandler
+Agar setiap service hanya memakai fungsi yang relevan.
+8. Dependency Inversion Principle (DIP)
+Konsep
+Module tingkat tinggi tidak bergantung langsung pada implementasi rendah.
+Implementasi
+Controller tidak langsung memanggil Hive atau MongoDB.
+Tetapi menggunakan abstraction seperti:
+StorageRepository
+Keuntungan
+Jika database berubah:
+Hive → SQLite,
+MongoDB → Firebase,
+controller tetap sama.
+9. Single Source of Truth (SSOT)
+Konsep
+Semua parameter penting disimpan di satu sumber konfigurasi.
+Tujuannya:
+konsistensi,
+kemudahan konfigurasi,
+mengurangi hardcoded value.
+10. Penggunaan File .env
+Parameter dinamis disimpan di .env.
+Contoh:
+SIMILARITY_THRESHOLD=0.85 MODEL_INPUT_SIZE=320 PIPELINE_MODE=cnn_v1 
+ENABLE_SOUND=true 
+ENABLE_VIBRATION=true
+11. Parameter yang Dikelola
+a. Threshold Similarity
+Digunakan menentukan:
+valid,
+invalid.
+b. Pipeline Model
+Menentukan model aktif:
+CNN,
+MobileNet,
+EfficientNet.
+c. Resolusi Input
+Mengatur:
+ukuran tensor,
+performa inference.
+d. Feature Toggle
+Mengaktifkan:
+suara,
+vibrasi,
+overlay debug.
+12. Keuntungan Single Source of Truth
+a. Mudah Maintenance
+Tidak perlu mencari nilai di banyak file.
+b. Konsistensi Sistem
+Semua module memakai nilai yang sama.
+c. Mudah Eksperimen
+Threshold dapat diubah tanpa rebuild besar.
+13. Lifecycle Safety
+Aplikasi mobile memiliki lifecycle yang berubah-ubah:
+foreground,
+background,
+paused,
+resumed.
+Jika lifecycle tidak dikelola:
+kamera bisa crash,
+memory leak,
+inference tetap berjalan saat aplikasi tertutup.
+14. Inisialisasi Kamera
+Kamera hanya aktif ketika:
+halaman verifikasi dibuka.
+Alur
+Open Verification Page
+        ↓
+Initialize Camera
+        ↓
+Start Stream
+        ↓
+Run Inference
+15. Dispose Kamera Otomatis
+Saat aplikasi:
+keluar halaman,
+masuk background,
+aplikasi ditutup,
+kamera harus di-dispose.
+Tujuan
+Agar:
+resource kamera dilepas,
+baterai tidak boros,
+tidak terjadi konflik kamera.
+16. Lifecycle Observer
+Sistem memanfaatkan observer untuk mendeteksi perubahan state aplikasi.
+Contoh state:
+resumed
+inactive
+paused
+detached
+if appPaused:
+    stopCamera()
+
+if appResumed:
+    restartCamera()
+17. Robustness terhadap Error
+Jenis Error yang Ditangani
+a. Kamera Tidak Tersedia
+Solusi:
+tampilkan dialog error.
+b. Model Gagal Load
+Solusi:
+fallback ke retry loading.
+c. Dokumen Tidak Terdeteksi
+Solusi:
+tampilkan overlay panduan.
+d. Tensor Invalid
+Solusi:
+reset preprocessing pipeline.
+18. Data Persistence
+Sistem membutuhkan penyimpanan hasil verifikasi agar:
+dapat dilacak,
+dianalisis,
+disinkronisasi.
+19. Penyimpanan Lokal dengan Hive
+Fungsi Hive
+Menyimpan:
+log verifikasi,
+timestamp,
+similarity score,
+status validasi.
+Contoh Data
+{
+  "documentId": "DOC-001",
+  "similarity": 0.91,
+  "status": "VALID",
+  "timestamp": "2026-05-09"
+}
+Keunggulan Hive
+Ringan,
+cepat,
+cocok untuk offline-first,
+mudah diintegrasikan dengan Flutter.
+20. Penyimpanan Cloud dengan MongoDB Atlas
+Tujuan
+Sinkronisasi cloud digunakan agar:
+data dapat dibagikan,
+riwayat aman,
+tersedia backup online.
+Data yang Disinkronisasi
+hasil verifikasi,
+metadata dokumen,
+user verifier,
+similarity result.
+21. Mekanisme Sinkronisasi
+Saat Online
+Hive
+  ↓
+Sync Service
+  ↓
+MongoDB Atlas
+Saat Offline
+Data tetap tersimpan lokal dan akan dikirim ketika koneksi tersedia.
+22. Strategi Offline-First
+Karena aplikasi dapat digunakan di lingkungan dengan internet tidak stabil, maka:
+inference tetap berjalan offline,
+Hive menjadi storage utama,
+cloud hanya untuk sinkronisasi tambahan.
+23. Logging System
+Logging digunakan untuk:
+debugging,
+audit,
+pelacakan aktivitas.
+Data Log
+Contoh:
+user login,
+hasil inference,
+error preprocessing,
+model loading time.
+24. Struktur Arsitektur Sistem
+View Layer
+    ↓
+Controller Layer
+    ↓
+Service Layer
+ ├── PCD Service
+ ├── ML Service
+ ├── Feedback Service
+ └── Storage Service
+    ↓
+Repository Layer
+ ├── Hive
+ └── MongoDB Atlas
+25. Struktur Folder Proyek
+lib/
+├── controller/
+│    └── verification_controller.dart
+│
+├── service/
+│    ├── image_processing_service.dart
+│    ├── ml_inference_service.dart
+│    ├── feedback_service.dart
+│    └── sync_service.dart
+│
+├── repository/
+│    ├── hive_repository.dart
+│    └── mongo_repository.dart
+│
+├── view/
+│    ├── verification_page.dart
+│    └── overlay_painter.dart
+│
+├── model/
+│    └── verification_result.dart
+│
+└── config/
+     └── env_config.dart
+26. Keamanan Sistem
+a. Validasi User
+Hanya user login dapat mengakses verifikasi.
+b. Validasi Dokumen
+Dokumen diperiksa sebelum inference.
+c. Secure Cloud Sync
+Sinkronisasi menggunakan:
+token autentikasi,
+koneksi HTTPS.
+27. Kesimpulan Bagian 3
+Pada tahap arsitektur dan robustness, sistem dirancang menggunakan prinsip SOLID agar modular, scalable, dan mudah dipelihara. Konsep Single Source of Truth memastikan seluruh parameter penting tersentralisasi melalui .env, sedangkan lifecycle safety menjaga penggunaan resource seperti kamera tetap aman dan efisien.
+Selain itu, strategi offline-first dengan Hive dan MongoDB Atlas memungkinkan sistem tetap berjalan meskipun koneksi internet tidak stabil. Dengan struktur arsitektur yang terpisah antara controller, service, repository, dan view, aplikasi menjadi lebih siap untuk dikembangkan dalam skala yang lebih besar.
+
+Bagian 4 — Visual Interface & Feedback
+1. Gambaran Umum Antarmuka Sistem
+Pada tahap ini, fokus pengembangan beralih ke bagaimana hasil deteksi dan verifikasi ditampilkan kepada pengguna secara visual dan interaktif. Antarmuka tidak hanya berfungsi sebagai tampilan, tetapi juga sebagai media komunikasi antara sistem Machine Learning dengan pengguna.
+Karena proses verifikasi dilakukan secara real-time, maka UI harus:
+mudah dipahami,
+responsif,
+informatif,
+dan memberikan feedback langsung.
+2. Tujuan Visual Interface
+Desain antarmuka dibuat untuk:
+a. Mempermudah Interpretasi Hasil
+Pengguna dapat langsung memahami:
+apakah tanda tangan valid,
+apakah sistem gagal membaca,
+atau apakah perlu dilakukan pengambilan ulang gambar.
+b. Memberikan Respons Cepat
+Feedback visual dan sensorik membantu pengguna mengetahui hasil tanpa harus membaca teks panjang.
+c. Meningkatkan User Experience
+Interaksi seperti:
+perubahan warna,
+vibrasi,
+suara,
+animasi,
+membuat sistem terasa lebih hidup dan intuitif.
+3. Konsep Overlay Detection
+Sistem menggunakan overlay di atas camera preview untuk menampilkan hasil deteksi tanda tangan.
+Fungsi Overlay
+Overlay digunakan untuk:
+menunjukkan area tanda tangan,
+memberikan status validasi,
+membantu positioning dokumen.
+Alur Kerja
+Camera Preview
+      ↓
+ML Detection Result
+      ↓
+Coordinate Scaling
+      ↓
+Overlay Rendering
+4. Bounding Box Valid
+Jika tanda tangan dianggap valid, sistem menampilkan:
+Bounding box warna hijau.
+Label “VALID”.
+Similarity score.
+Tujuan Warna Hijau
+Hijau dipilih karena secara psikologis:
+identik dengan sukses,
+aman,
+diterima.
+Informasi yang Ditampilkan
+Contoh:
+VALID Similarity: 92%
+5. Bounding Box Invalid
+Jika tanda tangan dianggap tidak valid, sistem menampilkan:
+Bounding box merah.
+Label “INVALID”.
+Similarity rendah.
+Tujuan Warna Merah
+Merah digunakan karena:
+mudah menarik perhatian,
+identik dengan peringatan,
+membantu pengguna segera menyadari masalah.
+Contoh Tampilan
+INVALID Similarity: 43%
+6. Dynamic Overlay Rendering
+Overlay harus berubah secara real-time berdasarkan hasil inference terbaru.
+Mekanisme
+Setiap frame:
+Kamera mengambil citra.
+ML inference berjalan.
+Hasil dikirim ke UI.
+Overlay diperbarui.
+Tantangan
+Jika rendering terlalu berat:
+UI menjadi patah-patah.
+FPS turun.
+Kamera lag.
+Karena itu overlay harus ringan.
+7. Custom Painter untuk Overlay
+Dalam Flutter, overlay dapat dibuat menggunakan:
+CustomPainter
+Fungsi
+CustomPainter menggambar:
+bounding box,
+garis,
+label,
+indikator status.
+Keuntungan
+Performa lebih baik.
+Fleksibel.
+Cocok untuk rendering real-time.
+8. Intelligent Feedback System
+Selain visual, sistem memberikan feedback tambahan agar interaksi lebih intuitif.
+9. Vibrasi saat Valid
+Mekanisme
+Saat similarity score melewati threshold:
+perangkat melakukan vibrasi singkat.
+Tujuan
+Membantu pengguna mengetahui keberhasilan tanpa harus melihat layar terus-menerus.
+Karakteristik Vibrasi
+Jenis vibrasi:
+singkat,
+ringan,
+tidak mengganggu.
+10. Efek Suara saat Invalid
+Jika tanda tangan tidak valid:
+sistem mengeluarkan suara “beep”.
+Tujuan
+Memberikan peringatan cepat bahwa:
+tanda tangan gagal diverifikasi,
+atau perlu pengambilan ulang.
+Kenapa Menggunakan Audio?
+Karena:
+pengguna mungkin tidak fokus ke layar,
+audio lebih cepat menarik perhatian.
+11. Perubahan Warna UI
+Selain bounding box, warna beberapa elemen UI juga berubah.
+Saat Valid
+UI berubah dominan:
+hijau,
+soft success indicator.
+Saat Invalid
+UI berubah dominan:
+merah,
+warning indicator.
+12. State Management UI
+UI harus mengikuti state inference secara real-time.
+Contoh State
+Idle Scanning Valid Invalid Error
+Tujuan State Management
+Agar:
+UI sinkron dengan ML,
+transisi status jelas,
+tidak terjadi konflik tampilan.
+13. Loading Indicator
+Saat model sedang memproses inference:
+tampil indikator loading kecil.
+Fungsi
+Memberi tahu pengguna bahwa:
+sistem masih bekerja,
+bukan freeze atau crash.
+14. Empty Detection State
+Jika tanda tangan belum terdeteksi:
+sistem menampilkan panduan visual.
+Contoh Pesan
+“Arahkan kamera ke area tanda tangan”
+Tujuan
+Membantu pengguna melakukan positioning dokumen.
+15. Error Feedback
+Jika terjadi error:
+kamera gagal,
+model gagal load,
+tensor invalid,
+maka UI menampilkan:
+pesan error,
+tombol retry.
+Contoh
+“Model gagal dimuat” [ Coba Lagi ]
+16. UX untuk Real-Time Verification
+Karena sistem bekerja real-time, UI harus:
+sederhana,
+fokus pada objek utama,
+tidak terlalu ramai.
+Prinsip Desain
+a. Minimalis
+Tidak terlalu banyak elemen.
+b. Fokus ke Kamera
+Camera preview menjadi elemen utama.
+c. Feedback Cepat
+Respons harus muncul segera setelah inference selesai.
+17. Responsivitas Antar Device
+Ukuran layar perangkat berbeda-beda:
+tablet,
+smartphone kecil,
+smartphone besar.
+Karena itu overlay harus adaptif.
+Solusi
+Menggunakan:
+MediaQuery,
+scaling ratio,
+responsive positioning.
+18. Accessibility Consideration
+Sistem juga memperhatikan aksesibilitas.
+Contoh
+a. Audio Feedback
+Membantu pengguna yang kurang fokus visual.
+b. Vibrasi
+Membantu notifikasi tanpa suara.
+c. Kontras Warna
+Hijau dan merah dibuat cukup kontras agar mudah dikenali.
+19. Struktur Komponen UI
+VerificationPage
+ ├── CameraPreview
+ ├── OverlayPainter
+ ├── StatusIndicator
+ ├── SimilarityLabel
+ ├── FeedbackAnimation
+ └── ErrorDialog
+20. Alur Interaksi Pengguna
+Open Verification Page
+        ↓
+Camera Active
+        ↓
+Document Detected
+        ↓
+PCD + ML Inference
+        ↓
+Result Generated
+        ↓
+Overlay + Feedback
+        ↓
+Save Verification Log
+21. Integrasi dengan Penyimpanan
+Setelah feedback ditampilkan:
+hasil verifikasi otomatis dicatat.
+Data yang disimpan:
+similarity score,
+timestamp,
+status validasi,
+user ID.
+22. Pengalaman Pengguna yang Diharapkan
+Dengan desain ini, pengguna diharapkan:
+cepat memahami hasil,
+nyaman menggunakan sistem,
+merasa proses verifikasi berjalan profesional,
+dan percaya terhadap hasil validasi.
+23. Keterkaitan UI dengan ML
+Visual interface bukan sekadar tampilan, tetapi representasi langsung dari:
+hasil inference,
+confidence model,
+status pipeline PCD.
+Karena itu UI harus:
+sinkron,
+real-time,
+dan akurat.
+24. Kesimpulan Bagian 4
+Pada tahap Visual Interface & Feedback, sistem dirancang agar mampu memberikan hasil verifikasi secara jelas, cepat, dan intuitif melalui kombinasi overlay visual, perubahan warna, vibrasi, dan efek suara. Bounding box hijau dan merah membantu pengguna memahami status validasi secara instan, sementara feedback sensorik meningkatkan pengalaman penggunaan secara real-time.
+Dengan pendekatan UI yang ringan, responsif, dan terintegrasi dengan pipeline ML, aplikasi tidak hanya berfungsi sebagai alat verifikasi teknis, tetapi juga memberikan pengalaman interaksi yang nyaman dan mudah dipahami oleh pengguna organisasi maupun lingkungan edukasi.
+
+
+Bagian 5 — Rangkuman Akhir & Finalisasi Konsep Sistem
+1. Gambaran Umum Finalisasi
+Pada tahap akhir ini, seluruh hasil diskusi, ideation, perancangan pipeline PCD, arsitektur sistem, hingga desain antarmuka digabungkan menjadi satu konsep sistem yang utuh.
+Tujuan utama bagian ini adalah memastikan bahwa setiap kelompok memiliki:
+arah pengembangan yang jelas,
+struktur sistem yang terorganisasi,
+dan dokumentasi awal yang siap digunakan untuk tahap implementasi.
+2. Final Problem Statement
+Problem statement menjadi inti dari keseluruhan proyek karena menjelaskan fokus utama sistem yang dikembangkan.
+Problem Statement
+“Bagaimana memverifikasi keaslian tanda tangan digital pada dokumen rapat organisasi menggunakan pengolahan citra digital dan machine learning secara real-time?”
+Makna Problem Statement
+Permasalahan ini menekankan beberapa hal penting:
+a. Verifikasi Keaslian
+Sistem bukan sekadar membaca gambar tanda tangan, tetapi memastikan apakah tanda tangan tersebut benar-benar sesuai dengan referensi pemiliknya.
+b. Dokumen Organisasi
+Fokus penggunaan berada pada:
+berita acara,
+surat persetujuan,
+dokumen rapat,
+dan administrasi organisasi lainnya.
+c. Pengolahan Citra Digital
+Citra tanda tangan diproses terlebih dahulu menggunakan teknik preprocessing agar model ML memperoleh input yang optimal.
+d. Real-Time Verification
+Hasil validasi diberikan secara langsung tanpa menunggu proses manual yang lama.
+3. Ringkasan Solusi Sistem
+Sistem yang dirancang merupakan aplikasi mobile berbasis Flutter dengan integrasi:
+Pengolahan Citra Digital (PCD),
+Machine Learning,
+database lokal Hive,
+dan sinkronisasi cloud MongoDB Atlas.
+Fungsi Utama Sistem
+a. Mengambil gambar tanda tangan
+Melalui:
+kamera,
+upload dokumen,
+atau scan dokumen.
+b. Melakukan preprocessing citra
+Tahapan:
+grayscale,
+normalisasi,
+crop,
+resize,
+tensor conversion.
+c. Menjalankan ML inference
+Model menganalisis:
+tekstur,
+kontur,
+pola tanda tangan.
+d. Menampilkan hasil verifikasi
+Output:
+valid,
+invalid,
+similarity score.
+e. Menyimpan hasil verifikasi
+Disimpan ke:
+Hive,
+MongoDB Atlas.
+4. Diagram Alur Data Sistem
+Diagram alur data menunjukkan bagaimana data bergerak dari input hingga output.
+Diagram Pipeline
+Sensor / Camera
+        ↓
+Pengolahan Citra Digital
+        ↓
+Machine Learning Inference
+        ↓
+Similarity Score
+        ↓
+Coordinate Scaling
+        ↓
+UI Overlay & Feedback
+        ↓
+Storage & Synchronization
+5. Penjelasan Diagram Alur
+a. Sensor / Camera
+Perangkat mengambil gambar dokumen dan area tanda tangan.
+b. Pengolahan Citra Digital
+Citra dibersihkan dan distandarisasi agar siap diproses model ML.
+c. Machine Learning Inference
+Model membandingkan pola tanda tangan dengan data referensi.
+d. Similarity Score
+Model menghasilkan nilai kemiripan.
+Contoh:
+0.92 → valid,
+0.41 → invalid.
+e. Coordinate Scaling
+Koordinat hasil model dipetakan ke ukuran layar perangkat.
+f. UI Overlay & Feedback
+Hasil divisualisasikan melalui:
+bounding box,
+warna,
+vibrasi,
+audio.
+g. Storage & Synchronization
+Hasil disimpan secara lokal dan cloud.
+6. Struktur Folder Final Proyek
+Agar pengembangan lebih modular, sistem menggunakan struktur folder terpisah berdasarkan tanggung jawab.
+Struktur Folder
+lib/
+├── config/
+│    └── env_config.dart
+│
+├── controller/
+│    └── verification_controller.dart
+│
+├── service/
+│    ├── image_processing_service.dart
+│    ├── ml_inference_service.dart
+│    ├── feedback_service.dart
+│    ├── camera_service.dart
+│    └── sync_service.dart
+│
+├── repository/
+│    ├── hive_repository.dart
+│    └── mongo_repository.dart
+│
+├── model/
+│    ├── verification_result.dart
+│    └── signature_model.dart
+│
+├── view/
+│    ├── verification_page.dart
+│    ├── overlay_painter.dart
+│    ├── result_card.dart
+│    └── loading_indicator.dart
+│
+└── utils/
+     ├── image_utils.dart
+     └── scaling_utils.dart
+7. Penjelasan Struktur Folder
+a. controller/
+Mengatur:
+event handler,
+state management,
+komunikasi UI dengan service.
+b. service/
+Berisi logika utama:
+preprocessing,
+inference,
+feedback,
+sinkronisasi.
+c. repository/
+Menghubungkan aplikasi dengan:
+Hive,
+MongoDB Atlas.
+d. model/
+Representasi struktur data aplikasi.
+e. view/
+Seluruh tampilan aplikasi.
+f. utils/
+Fungsi bantuan seperti:
+scaling,
+image conversion,
+helper processing.
+8. Integrasi Komponen Sistem
+Seluruh komponen saling terhubung melalui alur berikut:
+View
+ ↓
+Controller
+ ↓
+Service
+ ↓
+Repository
+ ↓
+Database
+9. Konsep Offline-First
+Sistem tetap berjalan walaupun internet tidak tersedia.
+Mekanisme
+Saat Offline
+inference tetap berjalan,
+data disimpan ke Hive.
+Saat Online
+data otomatis sinkron ke MongoDB Atlas.
+10. Keunggulan Sistem
+a. Real-Time Verification
+Validasi cepat tanpa pemeriksaan manual.
+b. Intelligent Feedback
+Menggunakan:
+visual,
+vibrasi,
+audio.
+c. Scalable Architecture
+Mudah dikembangkan ke:
+OCR,
+multi-signature,
+document verification.
+d. Maintainable
+Karena menggunakan:
+SOLID,
+modular architecture,
+Single Source of Truth.
+11. Potensi Pengembangan Selanjutnya
+Sistem dapat dikembangkan menjadi:
+a. Multi-Signature Verification
+Satu dokumen memuat banyak tanda tangan.
+b. OCR Integration
+Membaca isi dokumen sekaligus memverifikasi tanda tangan.
+c. Cloud-Based AI Model
+Inference dilakukan di server untuk model yang lebih besar.
+d. Anti-Tampering Detection
+Mendeteksi manipulasi dokumen.
+12. Risiko dan Tantangan
+a. Variasi Tanda Tangan
+Tanda tangan asli bisa berubah sedikit.
+b. Kualitas Kamera
+Cahaya buruk dapat mengurangi akurasi.
+c. Dataset Training
+Model membutuhkan dataset cukup banyak.
+d. Latency Inference
+Perangkat low-end dapat mengalami keterlambatan.
+13. Strategi Mitigasi
+TantanganSolusiNoise gambarpreprocessingLatencybackground isolateVariasi tanda tanganaugmentasi datasetDevice berbedaresponsive scaling
+14. Hasil Akhir yang Harus Dimiliki Kelompok
+Di akhir sesi, kelompok diharapkan memiliki:
+a. Problem Statement
+Masalah utama yang jelas.
+b. Diagram Pipeline
+Alur: Sensor → PCD → ML → UI.
+c. Struktur Folder
+Pembagian arsitektur modular.
+d. Rencana Pipeline ML
+Tahapan preprocessing dan inference.
+e. Konsep UI Feedback
+Overlay, vibrasi, audio, indikator warna.
+15. Nilai Pembelajaran
+Melalui proyek ini, kelompok mempelajari:
+integrasi PCD dan ML,
+pengolahan citra real-time,
+arsitektur Flutter,
+optimasi performa,
+dan desain aplikasi intelligent system.
+16. Kesimpulan Akhir
+Proyek verifikasi keaslian tanda tangan digital ini dirancang sebagai sistem intelligent verification berbasis Pengolahan Citra Digital dan Machine Learning yang mampu bekerja secara real-time pada perangkat mobile. Sistem memanfaatkan preprocessing citra, analisis pola tanda tangan, serta feedback visual dan sensorik untuk membantu pengguna memvalidasi dokumen organisasi secara lebih cepat dan aman.
+Dengan arsitektur modular berbasis SOLID, strategi offline-first menggunakan Hive dan MongoDB Atlas, serta integrasi isolate untuk menjaga performa aplikasi, sistem memiliki fondasi yang cukup kuat untuk dikembangkan lebih lanjut menjadi platform verifikasi dokumen digital yang lebih kompleks dan scalable.
