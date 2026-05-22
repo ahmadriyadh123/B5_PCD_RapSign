@@ -18,12 +18,10 @@ class _LegalitasViewState extends State<LegalitasView> {
   final PreprocessingPipeline _pipeline = PreprocessingPipeline();
 
   bool _isProcessing = false;
-  File? _documentFile;
   PreprocessingResult? _result;
   String? _error;
 
   Future<void> _pickDocument() async {
-    // Pilih sumber: galeri atau kamera
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (ctx) => SafeArea(
@@ -46,19 +44,13 @@ class _LegalitasViewState extends State<LegalitasView> {
     );
 
     if (source == null) return;
-
     final xFile = await _picker.pickImage(source: source, imageQuality: 90);
     if (xFile == null) return;
 
-    setState(() {
-      _documentFile = File(xFile.path);
-      _isProcessing = true;
-      _result = null;
-      _error = null;
-    });
+    setState(() { _isProcessing = true; _result = null; _error = null; });
 
     try {
-      final bytes = await _documentFile!.readAsBytes();
+      final bytes = await File(xFile.path).readAsBytes();
       final result = await _pipeline.process(bytes);
       setState(() { _result = result; _isProcessing = false; });
     } catch (e) {
@@ -66,83 +58,44 @@ class _LegalitasViewState extends State<LegalitasView> {
     }
   }
 
-  void _reset() {
-    setState(() {
-      _documentFile = null;
-      _result = null;
-      _error = null;
-    });
-  }
+  void _reset() => setState(() { _result = null; _error = null; });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       appBar: AppBar(title: const Text('Legalitas')),
-      body: _buildBody(theme),
-      floatingActionButton: _result == null
-          ? FloatingActionButton.extended(
-              onPressed: _isProcessing ? null : _pickDocument,
-              icon: const Icon(Icons.upload_file),
-              label: const Text('Upload Dokumen'),
-            )
-          : null,
+      body: _buildBody(),
     );
   }
 
-  Widget _buildBody(ThemeData theme) {
+  Widget _buildBody() {
     if (_isProcessing) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Mendeteksi tanda tangan...'),
-          ],
-        ),
-      );
+      return const Center(child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [CircularProgressIndicator(), SizedBox(height: 16), Text('Memproses...')],
+      ));
     }
-
     if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
-            const SizedBox(height: 12),
-            Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
-            const SizedBox(height: 16),
-            ElevatedButton(onPressed: _reset, child: const Text('Coba Lagi')),
-          ],
-        ),
-      );
-    }
-
-    if (_result != null) {
-      return _buildResultView(theme);
-    }
-
-    return _buildEmptyState(theme);
-  }
-
-  Widget _buildEmptyState(ThemeData theme) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      return Center(child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.description_outlined, size: 80, color: theme.colorScheme.primary.withValues(alpha: 0.4)),
+          Text(_error!, style: const TextStyle(color: Colors.red)),
           const SizedBox(height: 16),
-          Text('Belum ada dokumen', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Text('Upload dokumen untuk mendeteksi tanda tangan', style: theme.textTheme.bodySmall),
+          ElevatedButton(onPressed: _reset, child: const Text('Coba Lagi')),
         ],
+      ));
+    }
+    if (_result != null) return _buildResultView();
+    return Center(
+      child: ElevatedButton.icon(
+        onPressed: _pickDocument,
+        icon: const Icon(Icons.upload_file),
+        label: const Text('Upload Dokumen'),
       ),
     );
   }
 
-  Widget _buildResultView(ThemeData theme) {
+  Widget _buildResultView() {
     final r = _result!;
     return Column(
       children: [
@@ -150,14 +103,16 @@ class _LegalitasViewState extends State<LegalitasView> {
           child: ListView(
             padding: const EdgeInsets.all(12),
             children: [
-              _buildStepCard('Dokumen Asli', img.encodePng(r.originalImage), theme),
-              _buildStepCard('ROI (Area Tanda Tangan)', img.encodePng(r.roiImage), theme),
-              _buildStepCard('Segmentasi', img.encodePng(r.segmentedImage), theme),
-              _buildStepCard(
-                'Hasil Deteksi (${r.normalizedImage.width}×${r.normalizedImage.height})',
-                r.outputBytes,
-                theme,
-              ),
+              _card('1. Dokumen Asli (${r.originalImage.width}×${r.originalImage.height})',
+                  img.encodePng(r.originalImage)),
+              _card('2. Crop Dokumen Putih (${r.croppedDocument.width}×${r.croppedDocument.height})',
+                  img.encodePng(r.croppedDocument)),
+              _card('3. Deteksi Coretan Bawah (${r.detectedInk.width}×${r.detectedInk.height})',
+                  img.encodePng(r.detectedInk)),
+              _card('4. Segmentasi (${r.segmentedImage.width}×${r.segmentedImage.height})',
+                  img.encodePng(r.segmentedImage)),
+              _card('5. Normalized (${r.normalizedImage.width}×${r.normalizedImage.height})',
+                  r.outputBytes),
             ],
           ),
         ),
@@ -165,25 +120,19 @@ class _LegalitasViewState extends State<LegalitasView> {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _reset,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Upload Baru'),
-                ),
-              ),
+              Expanded(child: OutlinedButton.icon(
+                onPressed: _pickDocument,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Upload Baru'),
+              )),
               const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Tanda tangan berhasil diekstrak')),
-                    );
-                  },
-                  icon: const Icon(Icons.check),
-                  label: const Text('Simpan'),
+              Expanded(child: ElevatedButton.icon(
+                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Tanda tangan berhasil diekstrak')),
                 ),
-              ),
+                icon: const Icon(Icons.check),
+                label: const Text('Simpan'),
+              )),
             ],
           ),
         ),
@@ -191,7 +140,7 @@ class _LegalitasViewState extends State<LegalitasView> {
     );
   }
 
-  Widget _buildStepCard(String title, List<int> imageBytes, ThemeData theme) {
+  Widget _card(String title, List<int> bytes) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Column(
@@ -199,7 +148,7 @@ class _LegalitasViewState extends State<LegalitasView> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-            child: Text(title, style: theme.textTheme.titleSmall),
+            child: Text(title, style: Theme.of(context).textTheme.titleSmall),
           ),
           ClipRRect(
             borderRadius: const BorderRadius.only(
@@ -207,7 +156,7 @@ class _LegalitasViewState extends State<LegalitasView> {
               bottomRight: Radius.circular(12),
             ),
             child: Image.memory(
-              Uint8List.fromList(imageBytes),
+              Uint8List.fromList(bytes),
               width: double.infinity,
               fit: BoxFit.contain,
               height: 200,

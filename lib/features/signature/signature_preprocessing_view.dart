@@ -6,8 +6,7 @@ import 'package:image/image.dart' as img;
 import 'services/camera_service.dart';
 import 'services/preprocessing_pipeline.dart';
 
-/// View untuk modul preprocessing tanda tangan.
-/// Menampilkan camera preview, capture, dan hasil preprocessing step-by-step.
+/// View untuk modul preprocessing tanda tangan via kamera.
 class SignaturePreprocessingView extends StatefulWidget {
   const SignaturePreprocessingView({super.key});
 
@@ -55,9 +54,7 @@ class _SignaturePreprocessingViewState extends State<SignaturePreprocessingView>
     }
   }
 
-  void _reset() {
-    setState(() => _result = null);
-  }
+  void _reset() => setState(() { _result = null; _error = null; });
 
   @override
   void dispose() {
@@ -74,15 +71,11 @@ class _SignaturePreprocessingViewState extends State<SignaturePreprocessingView>
   }
 
   Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
     if (_error != null && _result == null) {
       return Center(child: Text(_error!, style: const TextStyle(color: Colors.red)));
     }
-    if (_result != null) {
-      return _buildResultView();
-    }
+    if (_result != null) return _buildResultView();
     return _buildCameraView();
   }
 
@@ -92,12 +85,7 @@ class _SignaturePreprocessingViewState extends State<SignaturePreprocessingView>
     }
     return Column(
       children: [
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: CameraPreview(_cameraService.controller!),
-          ),
-        ),
+        Expanded(child: CameraPreview(_cameraService.controller!)),
         Padding(
           padding: const EdgeInsets.all(16),
           child: SizedBox(
@@ -123,44 +111,23 @@ class _SignaturePreprocessingViewState extends State<SignaturePreprocessingView>
           child: ListView(
             padding: const EdgeInsets.all(12),
             children: [
-              _buildStepCard('1. Original', img.encodePng(r.originalImage)),
-              _buildStepCard('2. ROI Extraction', img.encodePng(r.roiImage)),
-              _buildStepCard('3. Segmentation', img.encodePng(r.segmentedImage)),
-              _buildStepCard('4. Normalized (${r.normalizedImage.width}x${r.normalizedImage.height})', r.outputBytes),
+              _card('1. Original', img.encodePng(r.originalImage)),
+              _card('2. Crop Dokumen', img.encodePng(r.croppedDocument)),
+              _card('3. Deteksi Coretan Bawah', img.encodePng(r.detectedInk)),
+              _card('4. Segmentasi', img.encodePng(r.segmentedImage)),
+              _card('5. Normalized', r.outputBytes),
             ],
           ),
         ),
         Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _reset,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Ulang'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Hasil siap untuk preprocessing lanjutan')),
-                    );
-                  },
-                  icon: const Icon(Icons.check),
-                  label: const Text('Gunakan'),
-                ),
-              ),
-            ],
-          ),
+          child: OutlinedButton.icon(onPressed: _reset, icon: const Icon(Icons.refresh), label: const Text('Ulang')),
         ),
       ],
     );
   }
 
-  Widget _buildStepCard(String title, List<int> imageBytes) {
+  Widget _card(String title, List<int> bytes) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Column(
@@ -171,16 +138,8 @@ class _SignaturePreprocessingViewState extends State<SignaturePreprocessingView>
             child: Text(title, style: Theme.of(context).textTheme.titleSmall),
           ),
           ClipRRect(
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(12),
-              bottomRight: Radius.circular(12),
-            ),
-            child: Image.memory(
-              Uint8List.fromList(imageBytes),
-              width: double.infinity,
-              fit: BoxFit.contain,
-              height: 180,
-            ),
+            borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(12), bottomRight: Radius.circular(12)),
+            child: Image.memory(Uint8List.fromList(bytes), width: double.infinity, fit: BoxFit.contain, height: 180),
           ),
         ],
       ),
