@@ -31,6 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   camera: ^0.12.0+1  # Mengakses hardware kamera
+  image_picker: ^1.0.7  # Pick image dari galeri/kamera
   permission_handler: ^12.0.1 # Mengelola izin akses secara elegan
   shared_preferences: ^2.2.2
   path_provider: ^2.1.2
