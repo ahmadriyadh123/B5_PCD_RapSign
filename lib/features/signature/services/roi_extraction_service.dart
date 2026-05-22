@@ -1,26 +1,35 @@
 import 'package:image/image.dart' as img;
+class RoiCropResult {
+  final img.Image image;
+  final int x;
+  final int y;
+  final int width;
+  final int height;
+
+  RoiCropResult({
+    required this.image,
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+  });
+}
 
 /// Service untuk ekstraksi Region of Interest (ROI) tanda tangan.
-/// Algoritma:
-/// 1. Crop area dokumen putih
-/// 2. Scan dari bawah ke atas, cari di mana ada coretan/tulisan (pixel gelap)
-/// 3. Crop bounding box area coretan tersebut
 class RoiExtractionService {
   static const int _whiteThreshold = 180;
   static const double _rowWhiteRatio = 0.5;
-  /// Pixel dianggap "tinta/coretan" jika luminance di bawah ini
   static const int _inkThreshold = 150;
-  /// Minimal pixel gelap per baris untuk dianggap ada tulisan
   static const int _minInkPixelsPerRow = 5;
 
   /// Pipeline: crop dokumen → deteksi posisi coretan di bawah.
-  img.Image extractFromDocument(img.Image source) {
-    final doc = cropWhiteDocument(source);
-    return detectInkFromBottom(doc);
+  RoiCropResult extractFromDocument(img.Image source) {
+    final docCrop = cropWhiteDocument(source);
+    return detectInkFromBottom(docCrop);
   }
 
   /// Crop area dokumen putih dari frame.
-  img.Image cropWhiteDocument(img.Image source) {
+  RoiCropResult cropWhiteDocument(img.Image source) {
     final w = source.width;
     final h = source.height;
     final minWhitePerRow = (w * _rowWhiteRatio).toInt();
@@ -50,7 +59,10 @@ class RoiExtractionService {
       bestStart = start;
       bestEnd = h - 1;
     }
-    if (bestLen < 50) return source;
+    
+    if (bestLen < 50) {
+      return RoiCropResult(image: source, x: 0, y: 0, width: w, height: h);
+    }
 
     // Batas horizontal
     final colWhite = List.filled(w, 0);
@@ -73,14 +85,17 @@ class RoiExtractionService {
     }
 
     final cropW = endX - startX + 1;
-    if (cropW < 50 || docH < 50) return source;
-    return img.copyCrop(source, x: startX, y: bestStart, width: cropW, height: docH);
+    if (cropW < 50 || docH < 50) {
+      return RoiCropResult(image: source, x: 0, y: 0, width: w, height: h);
+    }
+    
+    final cropped = img.copyCrop(source, x: startX, y: bestStart, width: cropW, height: docH);
+    return RoiCropResult(image: cropped, x: startX, y: bestStart, width: cropW, height: docH);
   }
 
-  /// Scan dari bawah ke atas, cari coretan paling bawah,
-  /// lalu lanjut ke atas sampai ketemu coretan terdekat di atasnya.
-  /// Stop ketika ada gap kosong setelah coretan kedua.
-  img.Image detectInkFromBottom(img.Image source) {
+  /// Scan dari bawah ke atas menggunakan input hasil crop sebelumnya.
+  RoiCropResult detectInkFromBottom(RoiCropResult docCrop) {
+    final source = docCrop.image;
     final w = source.width;
     final h = source.height;
     final grayscale = img.grayscale(source);
@@ -103,19 +118,16 @@ class RoiExtractionService {
       if (inkCount >= _minInkPixelsPerRow) {
         if (inkBottomY == -1) inkBottomY = y;
         inkTopY = y;
-        if (gapCount > 0) foundFirstBlock = true; // ada gap sebelumnya = ini blok kedua
+        if (gapCount > 0) foundFirstBlock = true;
         gapCount = 0;
       } else {
         if (inkBottomY != -1) gapCount++;
-        // Jika sudah melewati 2 blok coretan dan ketemu gap besar → stop
         if (foundFirstBlock && gapCount > 30) break;
-        // Jika baru 1 blok dan gap kecil, lanjut cari blok berikutnya di atas
-        // Jika gap terlalu besar tanpa blok kedua → stop juga
         if (!foundFirstBlock && gapCount > 80) break;
       }
     }
 
-    if (inkBottomY == -1) return source;
+    if (inkBottomY == -1) return docCrop; // Kembalikan docCrop asli jika tidak ketemu
 
     // Cari batas horizontal
     for (int y = inkTopY; y <= inkBottomY; y++) {
@@ -134,12 +146,24 @@ class RoiExtractionService {
     inkLeftX = (inkLeftX - padding).clamp(0, w - 1);
     inkRightX = (inkRightX + padding).clamp(0, w - 1);
 
-    return img.copyCrop(
+    final cropWidth = inkRightX - inkLeftX + 1;
+    final cropHeight = inkBottomY - inkTopY + 1;
+
+    final cropped = img.copyCrop(
       source,
       x: inkLeftX,
       y: inkTopY,
-      width: inkRightX - inkLeftX + 1,
-      height: inkBottomY - inkTopY + 1,
+      width: cropWidth,
+      height: cropHeight,
+    );
+
+    // Mengakumulasi koordinat untuk mendapatkan posisi absolut di original frame
+    return RoiCropResult(
+      image: cropped,
+      x: docCrop.x + inkLeftX,
+      y: docCrop.y + inkTopY,
+      width: cropWidth,
+      height: cropHeight,
     );
   }
 }

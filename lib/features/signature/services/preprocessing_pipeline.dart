@@ -1,11 +1,9 @@
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
-
 import 'roi_extraction_service.dart';
 import 'segmentation_service.dart';
 import 'normalization_service.dart';
 
-/// Hasil dari preprocessing pipeline — setiap step untuk debugging.
 class PreprocessingResult {
   final img.Image originalImage;
   final img.Image croppedDocument;   // Step 1: crop area putih
@@ -13,6 +11,12 @@ class PreprocessingResult {
   final img.Image segmentedImage;    // Step 3: segmentasi
   final img.Image normalizedImage;   // Step 4: resize final
   final Uint8List outputBytes;
+  
+  // Penambahan DTO Koordinat Bounding Box untuk Anggota 4
+  final int boundingBoxX;
+  final int boundingBoxY;
+  final int boundingBoxWidth;
+  final int boundingBoxHeight;
 
   PreprocessingResult({
     required this.originalImage,
@@ -21,6 +25,10 @@ class PreprocessingResult {
     required this.segmentedImage,
     required this.normalizedImage,
     required this.outputBytes,
+    required this.boundingBoxX,
+    required this.boundingBoxY,
+    required this.boundingBoxWidth,
+    required this.boundingBoxHeight,
   });
 }
 
@@ -34,25 +42,31 @@ class PreprocessingPipeline {
     final original = img.decodeImage(imageBytes);
     if (original == null) throw Exception('Gagal decode gambar');
 
-    // Step 1: Crop dokumen putih
-    final croppedDoc = _roiService.cropWhiteDocument(original);
+    // Step 1: Crop dokumen putih (Kini mengembalikan RoiCropResult)
+    final docCropResult = _roiService.cropWhiteDocument(original);
 
-    // Step 2: Deteksi coretan paling bawah
-    final ink = _roiService.detectInkFromBottom(croppedDoc);
+    // Step 2: Deteksi coretan paling bawah (Kini menerima dan mengembalikan RoiCropResult)
+    final inkCropResult = _roiService.detectInkFromBottom(docCropResult);
 
-    // Step 3: Segmentasi
-    final segmented = _segmentationService.adaptiveThreshold(ink);
+    // Step 3: Segmentasi (Diambil dari image hasil crop final)
+    final segmented = _segmentationService.adaptiveThreshold(inkCropResult.image);
 
     // Step 4: Normalisasi ukuran
     final normalized = _normalizationService.resizeWithAspectRatio(segmented, size: targetSize);
 
     return PreprocessingResult(
       originalImage: original,
-      croppedDocument: croppedDoc,
-      detectedInk: ink,
+      croppedDocument: docCropResult.image,
+      detectedInk: inkCropResult.image,
       segmentedImage: segmented,
       normalizedImage: normalized,
       outputBytes: Uint8List.fromList(img.encodePng(normalized)),
+      
+      // Mengirim koordinat absolut ke Vision Controller
+      boundingBoxX: inkCropResult.x,
+      boundingBoxY: inkCropResult.y,
+      boundingBoxWidth: inkCropResult.width,
+      boundingBoxHeight: inkCropResult.height,
     );
   }
 }
