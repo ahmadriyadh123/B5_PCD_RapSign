@@ -13,8 +13,7 @@ def main(argv: Optional[list] = None) -> None:
     import argparse
 
     parser = argparse.ArgumentParser(description="Signature verification ML pipeline")
-    parser.add_argument("--contour-dir", type=Path, required=False, help="Folder contour-enhanced images")
-    parser.add_argument("--feature-ready-dir", type=Path, required=False, help="Folder feature-ready images")
+    parser.add_argument("--dataset-dir", type=Path, required=False, help="Folder containing raw images grouped by class")
     parser.add_argument("--export-dir", type=Path, default=DEFAULT_EXPORT_DIR, help="Folder output artifacts")
     parser.add_argument("--train", action="store_true", help="Train model using the dataset")
     parser.add_argument("--contour", type=Path, help="Contour-enhanced image path for inference")
@@ -27,12 +26,16 @@ def main(argv: Optional[list] = None) -> None:
     pipeline = SignatureVerificationPipeline()
 
     if args.train:
-        if args.contour_dir is None or args.feature_ready_dir is None:
-            raise ValueError("Both --contour-dir and --feature-ready-dir are required for training.")
-        metrics = pipeline.train(args.contour_dir, args.feature_ready_dir)
+        if args.dataset_dir is None:
+            raise ValueError("--dataset-dir is required for training.")
+        print("\n========================================")
+        print("====  STARTING TRAINING PIPELINE  ====")
+        print("========================================")
+        metrics = pipeline.train(args.dataset_dir)
         args.model_path.parent.mkdir(parents=True, exist_ok=True)
         pipeline.save(args.model_path)
-        export_feature_manifest(args.contour_dir, args.feature_ready_dir, args.export_dir)
+        print(f"[LOG] Model berhasil disimpan ke {args.model_path}")
+        # export_feature_manifest is skipped for raw dataset training
         print(json.dumps(metrics, indent=2))
 
     if args.contour is not None or args.feature_ready is not None:
@@ -40,8 +43,13 @@ def main(argv: Optional[list] = None) -> None:
             raise ValueError("Both --contour and --feature-ready must be provided for inference.")
         if pipeline.model is None:
             if args.model_path.exists():
+                print(f"[LOG] Memuat model tersimpan dari {args.model_path}...")
                 pipeline = SignatureVerificationPipeline.load(args.model_path)
             else:
                 raise FileNotFoundError(f"Model not found at {args.model_path}. Run with --train first.")
+                
+        print("\n========================================")
+        print("==== STARTING INFERENCE PIPELINE  ====")
+        print("========================================")
         result = pipeline.infer_payload(contour_image_path=args.contour, feature_ready_image_path=args.feature_ready, enrolled_label=args.label, threshold=args.threshold)
         print(json.dumps(result, indent=2))
