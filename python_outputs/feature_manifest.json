@@ -1,0 +1,116 @@
+{
+  "contour_dir": "python_outputs\\dummy_other_group\\contour",
+  "feature_ready_dir": "python_outputs\\dummy_other_group\\feature_ready",
+  "samples": [
+    {
+      "label": "a_(101)",
+      "image_path": "python_outputs\\dummy_other_group\\contour\\a_(101)\\1.png",
+      "bbox": [
+        0,
+        0,
+        600,
+        500
+      ],
+      "feature_vector_length": 49
+    },
+    {
+      "label": "a_(101)",
+      "image_path": "python_outputs\\dummy_other_group\\contour\\a_(101)\\2.png",
+      "bbox": [
+        0,
+        0,
+        600,
+        500
+      ],
+      "feature_vector_length": 49
+    },
+    {
+      "label": "a_(101)",
+      "image_path": "python_outputs\\dummy_other_group\\contour\\a_(101)\\3.png",
+      "bbox": [
+        0,
+        0,
+        600,
+        500
+      ],
+      "feature_vector_length": 49
+    },
+    {
+      "label": "a_(101)",
+      "image_path": "python_outputs\\dummy_other_group\\contour\\a_(101)\\4.png",
+      "bbox": [
+        0,
+        0,
+        600,
+        500
+      ],
+      "feature_vector_length": 49
+    },
+    {
+      "label": "a_(101)",
+      "image_path": "python_outputs\\dummy_other_group\\contour\\a_(101)\\5.png",
+      "bbox": [
+        0,
+        0,
+        600,
+        500
+      ],
+      "feature_vector_length": 49
+    },
+    {
+      "label": "a_(102)",
+      "image_path": "python_outputs\\dummy_other_group\\contour\\a_(102)\\1.png",
+      "bbox": [
+        0,
+        0,
+        600,
+        500
+      ],
+      "feature_vector_length": 49
+    },
+    {
+      "label": "a_(102)",
+      "image_path": "python_outputs\\dummy_other_group\\contour\\a_(102)\\2.png",
+      "bbox": [
+        0,
+        0,
+        600,
+        500
+      ],
+      "feature_vector_length": 49
+    },
+    {
+      "label": "a_(102)",
+      "image_path": "python_outputs\\dummy_other_group\\contour\\a_(102)\\3.png",
+      "bbox": [
+        0,
+        0,
+        600,
+        500
+      ],
+      "feature_vector_length": 49
+    },
+    {
+      "label": "a_(102)",
+      "image_path": "python_outputs\\dummy_other_group\\contour\\a_(102)\\4.png",
+      "bbox": [
+        0,
+        0,
+        600,
+        500
+      ],
+      "feature_vector_length": 49
+    },
+    {
+      "label": "a_(102)",
+      "image_path": "python_outputs\\dummy_other_group\\contour\\a_(102)\\5.png",
+      "bbox": [
+        0,
+        0,
+        600,
+        500
+      ],
+      "feature_vector_length": 49
+    }
+  ]
+}

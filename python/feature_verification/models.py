@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 import numpy as np
+import torch
 
 
 @dataclass(frozen=True)
@@ -18,7 +19,7 @@ class SignatureFeatures:
     label: str
     image_path: Path
     bbox: Tuple[int, int, int, int]
-    feature_vector: np.ndarray
+    image_tensor: torch.Tensor
     contour_image: np.ndarray
     feature_ready_image: np.ndarray
 
@@ -27,7 +28,7 @@ class SignatureFeatures:
             "label": self.label,
             "image_path": str(self.image_path),
             "bbox": list(self.bbox),
-            "feature_vector_length": int(self.feature_vector.shape[0]),
+            "tensor_shape": list(self.image_tensor.shape),
         }
 
 
