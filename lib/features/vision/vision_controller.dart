@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../signature/services/preprocessing_pipeline.dart';
 import 'vision_image_processor.dart';
 
 enum VisionInteractiveFilterId {
@@ -151,34 +151,82 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
   Uint8List? processedImageBytes;
   List<int>? histogramBins;
 
-  final Random _random = Random();
-  Timer? _mockDetectionTimer;
   Timer? _processDebounceTimer;
   bool _isInitializing = false;
   bool _isDisposed = false;
   int _previewGenerationToken = 0;
 
-  // Koordinat normalized (0..1) agar box mudah dipetakan ke ukuran layar apapun.
-  Offset _mockDetectionCenter = const Offset(0.5, 0.5);
-  double _mockDetectionWidthRatio = 0.3;
-  String _mockDetectionCode = 'RD-004';
-  String _mockDetectionName = 'Pothole';
-  String _mockSeverityCode = 'D40';
-  String _mockSeverityLabel = 'Severe';
+  // ─── STATE REAL-TIME PIPELINE TANDA TANGAN ───────────────────
+  Rect? _signatureBoundingBox;
+  double _similarityScore = 0.0;
+  bool _isSignatureValid = false;
 
-  Offset get mockDetectionCenter => _mockDetectionCenter;
-  double get mockDetectionWidthRatio => _mockDetectionWidthRatio;
-  String get mockDetectionCode => _mockDetectionCode;
-  String get mockDetectionName => _mockDetectionName;
-  String get mockSeverityCode => _mockSeverityCode;
-  String get mockSeverityLabel => _mockSeverityLabel;
+  Rect? get signatureBoundingBox => _signatureBoundingBox;
+  double get similarityScore => _similarityScore;
+  bool get isSignatureValid => _isSignatureValid;
 
   bool get hasCapturedImage => capturedImageBytes != null;
   List<VisionInteractiveFilter> get availableInteractiveFilters =>
       visionInteractiveFilters;
 
+  // --- Mock / Overlay helpers (used by DamagePainter overlay)
+  /// Normalized detection center (0..1) relative to preview frame.
+  Offset get mockDetectionCenter {
+    if (_signatureBoundingBox != null && controller?.value.previewSize != null) {
+      final preview = controller!.value.previewSize!;
+      // previewSize from camera may be rotated; use width/height as provided
+      final centerX = _signatureBoundingBox!.left + _signatureBoundingBox!.width / 2;
+      final centerY = _signatureBoundingBox!.top + _signatureBoundingBox!.height / 2;
+      final nx = preview.width > 0 ? (centerX / preview.width) : 0.5;
+      final ny = preview.height > 0 ? (centerY / preview.height) : 0.5;
+      return Offset(nx.clamp(0.0, 1.0), ny.clamp(0.0, 1.0));
+    }
+    return const Offset(0.5, 0.5);
+  }
+
+  /// Width ratio for detection box (0..1)
+  double get mockDetectionWidthRatio {
+    if (_signatureBoundingBox != null && controller?.value.previewSize != null) {
+      final preview = controller!.value.previewSize!;
+      final ratio = preview.width > 0 ? (_signatureBoundingBox!.width / preview.width) : 0.28;
+      return ratio.clamp(0.05, 0.9);
+    }
+    return 0.28;
+  }
+
+  /// Mock detection classification code
+  String get mockDetectionCode {
+    return 'RD-001';
+  }
+
+  /// Mock detection human-friendly name
+  String get mockDetectionName {
+    return 'Surface Anomaly';
+  }
+
+  /// Severity code derived from similarity score (mock logic)
+  String get mockSeverityCode {
+    if (_similarityScore >= 0.9) return 'D40';
+    if (_similarityScore >= 0.75) return 'D20';
+    if (_similarityScore >= 0.6) return 'D10';
+    return 'D00';
+  }
+
+  /// Severity label text
+  String get mockSeverityLabel {
+    switch (mockSeverityCode) {
+      case 'D40':
+        return 'Heavy';
+      case 'D20':
+        return 'Moderate';
+      case 'D10':
+        return 'Minor';
+      default:
+        return 'Light';
+    }
+  }
+
   VisionController() {
-    // Mendaftarkan observer agar bisa memantau status aplikasi (Lifecycle)
     WidgetsBinding.instance.addObserver(this);
     initCamera();
   }
@@ -214,11 +262,10 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
 
       await releaseCamera();
 
-      // Memilih Kamera Belakang (Index 0)
       controller = CameraController(
         cameras[0],
-        ResolutionPreset.high, // Keseimbangan antara akurasi AI & performa
-        enableAudio: false, // Kita hanya butuh visual untuk deteksi jalan
+        ResolutionPreset.high,
+        enableAudio: false,
       );
 
       await controller!.initialize();
@@ -227,7 +274,6 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
       if (isTorchEnabled) {
         await _setTorchMode(true);
       }
-      _startMockDetection();
     } catch (e) {
       errorMessage = "Failed to initialize camera: $e";
     } finally {
@@ -242,105 +288,7 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  void _startMockDetection() {
-    _mockDetectionTimer?.cancel();
-    _updateMockDetection();
-    _mockDetectionTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      _updateMockDetection();
-    });
-  }
-
-  void _updateMockDetection() {
-    // Simulasi output YOLO: lokasi box berpindah acak secara berkala.
-    final widthRatio = 0.2 + (_random.nextDouble() * 0.18); // 20% - 38%
-    final half = widthRatio / 2;
-
-    const detections = <({
-      String code,
-      String name,
-      String severityCode,
-      String severityLabel
-    })>[
-      (
-        code: 'RD-001',
-        name: 'Longitudinal Crack',
-        severityCode: 'D00',
-        severityLabel: 'Light'
-      ),
-      (
-        code: 'RD-002',
-        name: 'Transverse Crack',
-        severityCode: 'D10',
-        severityLabel: 'Minor'
-      ),
-      (
-        code: 'RD-003',
-        name: 'Alligator Crack',
-        severityCode: 'D20',
-        severityLabel: 'Moderate'
-      ),
-      (
-        code: 'RD-004',
-        name: 'Pothole',
-        severityCode: 'D40',
-        severityLabel: 'Severe'
-      ),
-      (
-        code: 'RD-005',
-        name: 'Rutting',
-        severityCode: 'D20',
-        severityLabel: 'Moderate'
-      ),
-      (
-        code: 'RD-006',
-        name: 'Depression',
-        severityCode: 'D20',
-        severityLabel: 'Moderate'
-      ),
-      (
-        code: 'RD-007',
-        name: 'Shoving',
-        severityCode: 'D10',
-        severityLabel: 'Minor'
-      ),
-      (
-        code: 'RD-008',
-        name: 'Edge Break',
-        severityCode: 'D20',
-        severityLabel: 'Moderate'
-      ),
-      (
-        code: 'RD-009',
-        name: 'Patch Failure',
-        severityCode: 'D40',
-        severityLabel: 'Severe'
-      ),
-      (
-        code: 'RD-010',
-        name: 'Bleeding',
-        severityCode: 'D00',
-        severityLabel: 'Light'
-      ),
-    ];
-
-    final selected = detections[_random.nextInt(detections.length)];
-
-    final x = half + (_random.nextDouble() * (1 - (half * 2)));
-    final y = half + (_random.nextDouble() * (1 - (half * 2)));
-
-    _mockDetectionCenter = Offset(x, y);
-    _mockDetectionWidthRatio = widthRatio;
-    _mockDetectionCode = selected.code;
-    _mockDetectionName = selected.name;
-    _mockSeverityCode = selected.severityCode;
-    _mockSeverityLabel = selected.severityLabel;
-    notifyListeners();
-  }
-
   Future<void> releaseCamera() async {
-    _mockDetectionTimer?.cancel();
-    _mockDetectionTimer = null;
-
     isTorchEnabled = false;
     isLoading = false;
 
@@ -376,9 +324,7 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
       await cameraController.setFlashMode(
         enabled ? FlashMode.torch : FlashMode.off,
       );
-    } catch (_) {
-      // Jika device tidak mendukung torch, state tidak diubah.
-    }
+    } catch (_) {}
   }
 
   void toggleOverlay() {
@@ -499,10 +445,7 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
       customSaturation = 1.0;
       selectedPreset = VisionPresetStyle.original;
       showHistogram = true;
-      debugPrint(
-        '[HistogramDebug][captureFrame] Captured bytes=${capturedImageBytes?.length ?? 0}. '
-        'State reset -> showHistogram=$showHistogram, filter=$selectedFilter, intensity=$filterIntensity',
-      );
+      
       unawaited(generateInteractiveFilterPreviews());
       requestReprocessCapturedFrame();
       processMessage = 'Gambar berhasil ditangkap. Siap diproses.';
@@ -523,19 +466,36 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     isProcessing = true;
-    processMessage = 'Memproses citra digital...';
-    if (!_isDisposed) {
-      notifyListeners();
-    }
+    processMessage = 'Tahap 1: Mengekstraksi Area Tanda Tangan...';
+    if (!_isDisposed) notifyListeners();
 
     try {
-      debugPrint(
-        '[HistogramDebug][process:start] includeHistogram=$showHistogram, '
-        'sourceBytes=${sourceBytes.length}, filter=$selectedFilter, preset=$selectedPreset',
+      // ─────────────────────────────────────────────────────────────
+      // 1. TAHAP AKUISISI & ROI (Anggota 1)
+      // ─────────────────────────────────────────────────────────────
+      final preprocessingPipeline = PreprocessingPipeline();
+      // Memasukkan gambar utuh dari kamera ke pipeline Anggota 1
+      final prepResult = await preprocessingPipeline.process(sourceBytes);
+
+      // Menangkap DTO Koordinat dari Anggota 1 dan menyimpannya ke state
+      _signatureBoundingBox = Rect.fromLTWH(
+        prepResult.boundingBoxX.toDouble(),
+        prepResult.boundingBoxY.toDouble(),
+        prepResult.boundingBoxWidth.toDouble(),
+        prepResult.boundingBoxHeight.toDouble(),
       );
 
+      processMessage = 'Tahap 2: Memproses citra digital...';
+      if (!_isDisposed) notifyListeners();
+
+      // ─────────────────────────────────────────────────────────────
+      // 2. TAHAP PENGOLAHAN CITRA / TEPI (Anggota 2)
+      // ─────────────────────────────────────────────────────────────
+      // Di sini kita melempar gambar ke algoritma Anggota 2.
+      // Catatan: Jika ingin efek filter visual diterapkan hanya pada kotak ROI,
+      // ubah 'sourceBytes' di bawah menjadi 'prepResult.outputBytes'.
       final result = await VisionImageProcessor.process(
-        sourceBytes: sourceBytes,
+        sourceBytes: sourceBytes, 
         applyContrast: applyContrast,
         filterType: selectedFilter,
         filterIntensity: filterIntensity,
@@ -548,24 +508,26 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
 
       processedImageBytes = result.imageBytes;
       histogramBins = result.histogramBins;
-      final binsCount = histogramBins?.length ?? 0;
-      final totalBinSamples = histogramBins?.fold<int>(0, (a, b) => a + b) ?? 0;
-      debugPrint(
-        '[HistogramDebug][process:done] binsCount=$binsCount, totalBinSamples=$totalBinSamples, '
-        'showHistogram=$showHistogram',
-      );
-      if (!showHistogram) {
-        debugPrint(
-          '[HistogramDebug][process:hint] Histogram tidak akan ditampilkan di preview karena showHistogram=false.',
-        );
-      } else if (binsCount == 0) {
-        debugPrint(
-          '[HistogramDebug][process:warn] showHistogram=true tetapi bins kosong.',
-        );
-      }
-      processMessage = 'Pemrosesan selesai.';
+
+      processMessage = 'Tahap 3: Memverifikasi Tanda Tangan...';
+      if (!_isDisposed) notifyListeners();
+
+      // ─────────────────────────────────────────────────────────────
+      // 3. TAHAP MACHINE LEARNING (Anggota 3) - Placeholder
+      // ─────────────────────────────────────────────────────────────
+      // TODO: Panggil fungsi ML dari Anggota 3 di sini saat sudah siap.
+      // final mlResult = await MLService.verifySignature(result.imageBytes);
+      // _similarityScore = mlResult.score;
+      // _isSignatureValid = mlResult.isValid;
+      
+      // Simulasi sementara agar UI Anda (Fase 3) bisa merender warna valid/invalid
+      _similarityScore = 0.88; // Anggap kemiripan 88%
+      _isSignatureValid = true; 
+
+      processMessage = 'Verifikasi selesai.';
     } catch (e) {
       processMessage = 'Gagal memproses citra: $e';
+      _signatureBoundingBox = null; // Reset letak kotak jika gagal
     } finally {
       isProcessing = false;
       if (!_isDisposed) {
@@ -638,7 +600,6 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     if (state == AppLifecycleState.resumed) {
-      // Menginisialisasi ulang saat pengguna kembali ke aplikasi
       if (!isInitialized && !_isInitializing) {
         initCamera();
       } else if (isInitialized && isTorchEnabled) {
@@ -650,7 +611,6 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      // Melepaskan resource kamera saat aplikasi masuk background.
       releaseCamera().then((_) {
         if (!_isDisposed) {
           notifyListeners();
@@ -662,20 +622,12 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void dispose() {
     _isDisposed = true;
-
-    // Menghapus observer agar tidak terjadi memory leak
     WidgetsBinding.instance.removeObserver(this);
-
-    _mockDetectionTimer?.cancel();
-    _mockDetectionTimer = null;
-
     _processDebounceTimer?.cancel();
     _processDebounceTimer = null;
-
     controller?.dispose();
     controller = null;
     isInitialized = false;
-
     super.dispose();
   }
 }

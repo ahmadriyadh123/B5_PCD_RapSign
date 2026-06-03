@@ -3,6 +3,8 @@
 // Gaya: Immersive camera · Vintage warm overlay · Konsisten dengan main.dart
 // ============================================================
 
+// ignore_for_file: unused_field
+
 import 'vision_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
