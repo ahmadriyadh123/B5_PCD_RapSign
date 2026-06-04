@@ -804,11 +804,108 @@ class _VisionViewState extends State<VisionView> with TickerProviderStateMixin {
               alignment: Alignment.centerRight,
               child: _workspaceMode == VisionWorkspaceMode.camera
                   ? _buildFilterDropdown()
-                  : const SizedBox(),
+                  : _buildVerifyAction(),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildVerifyAction() {
+    final isProcessing = _visionController.isProcessing;
+    final hasImage = _visionController.hasCapturedImage;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Result badge
+        if (hasImage)
+          Container(
+            margin: const EdgeInsets.only(right: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: _visionController.isSignatureValid
+                  ? _Tokens.mutedGold.withValues(alpha: 0.12)
+                  : Colors.white.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _visionController.isSignatureValid
+                    ? _Tokens.mutedGold
+                    : Colors.white12,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${(_visionController.similarityScore * 100).toStringAsFixed(1)}%',
+                  style: TextStyle(
+                    color: _visionController.isSignatureValid
+                        ? _Tokens.mutedGold
+                        : Colors.white70,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _visionController.isSignatureValid ? 'VALID' : 'INVALID',
+                  style: TextStyle(
+                    color: _visionController.isSignatureValid
+                        ? _Tokens.mutedGold
+                        : Colors.white54,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        GestureDetector(
+          onTap: (!hasImage || isProcessing)
+              ? null
+              : () async {
+                  // trigger integrated check
+                  await _visionController.processCapturedFrame();
+                },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: (!hasImage || isProcessing)
+                  ? Colors.white12
+                  : _Tokens.mutedGold.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: (!hasImage || isProcessing)
+                    ? _Tokens.glassStroke
+                    : _Tokens.mutedGold.withValues(alpha: 0.55),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.verified_rounded,
+                  size: 18,
+                  color: (!hasImage || isProcessing)
+                      ? Colors.white54
+                      : _Tokens.mutedGold,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  isProcessing ? 'Verifying...' : 'Verify',
+                  style: TextStyle(
+                    color: (!hasImage || isProcessing)
+                        ? Colors.white54
+                        : _Tokens.mutedGold,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
