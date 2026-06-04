@@ -7,6 +7,9 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../signature/services/preprocessing_pipeline.dart';
 import 'vision_image_processor.dart';
+import '../signature/services/inference_service.dart';
+import 'package:image/image.dart' as img_lib;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 enum VisionInteractiveFilterId {
   natural,
@@ -155,6 +158,7 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
   bool _isInitializing = false;
   bool _isDisposed = false;
   int _previewGenerationToken = 0;
+  final InferenceService? inferenceService;
 
   // ─── STATE REAL-TIME PIPELINE TANDA TANGAN ───────────────────
   Rect? _signatureBoundingBox;
@@ -226,7 +230,7 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  VisionController() {
+  VisionController({this.inferenceService}) {
     WidgetsBinding.instance.addObserver(this);
     initCamera();
   }
@@ -515,16 +519,39 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
       // ─────────────────────────────────────────────────────────────
       // 3. TAHAP MACHINE LEARNING (Anggota 3) - Placeholder
       // ─────────────────────────────────────────────────────────────
-      // TODO: Panggil fungsi ML dari Anggota 3 di sini saat sudah siap.
-      // final mlResult = await MLService.verifySignature(result.imageBytes);
-      // _similarityScore = mlResult.score;
-      // _isSignatureValid = mlResult.isValid;
-      
-      // Simulasi sementara agar UI Anda (Fase 3) bisa merender warna valid/invalid
-      _similarityScore = 0.88; // Anggap kemiripan 88%
-      _isSignatureValid = true; 
+      // Panggil InferenceService untuk melakukan verifikasi ke server ML
+      try {
+        final InferenceService inference;
+        if (this.inferenceService != null) {
+          inference = this.inferenceService!;
+        } else {
+          final baseUrl = (dotenv.isInitialized ? (dotenv.env['INFER_BASE_URL'] ?? 'http://127.0.0.1:8000') : 'http://127.0.0.1:8000');
+          inference = InferenceService(baseUrl: baseUrl);
+        }
 
-      processMessage = 'Verifikasi selesai.';
+        // prepResult.detectedInk adalah img.Image (dart image package)
+        final contourPng = img_lib.encodePng(prepResult.detectedInk);
+        final featureReady = prepResult.outputBytes;
+
+        processMessage = 'Menghubungi server verifikasi...';
+        if (!_isDisposed) notifyListeners();
+
+        final inf = await inference.infer(
+          contourBytes: Uint8List.fromList(contourPng),
+          featureReadyBytes: featureReady,
+          enrolledLabel: null,
+          threshold: 0.75,
+        );
+
+        _similarityScore = inf.similarity;
+        _isSignatureValid = inf.valid;
+        processMessage = 'Verifikasi selesai.';
+      } catch (e) {
+        // Jika server tidak tersedia atau error, tetap tidak crash: simulasikan fallback
+        processMessage = 'Verifikasi gagal: $e';
+        _similarityScore = 0.0;
+        _isSignatureValid = false;
+      }
     } catch (e) {
       processMessage = 'Gagal memproses citra: $e';
       _signatureBoundingBox = null; // Reset letak kotak jika gagal
