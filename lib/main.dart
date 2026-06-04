@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'features/signature/models/verification_log_model.dart';
 // import 'package:logbook_app_001/features/logbook/log_view.dart';
 import 'package:camera/camera.dart';
 import 'features/onboarding/onboarding_view.dart';
@@ -23,6 +24,10 @@ void main() async {
   if (!Hive.isAdapterRegistered(1)) {
     Hive.registerAdapter(LogCategoryAdapter());
   }
+  if (!Hive.isAdapterRegistered(2)) {
+  Hive.registerAdapter(VerificationLogModelAdapter());
+  }
+  await Hive.openBox<VerificationLogModel>('verification_logs');
 
   await Hive.openBox<LogModel>('offline_logs');
   try {

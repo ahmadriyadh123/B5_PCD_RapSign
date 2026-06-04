@@ -9,6 +9,7 @@ import 'package:logbook_app_001/helpers/log_helper.dart';
 import 'package:logbook_app_001/services/access_policy.dart';
 import 'package:logbook_app_001/services/mongo_service.dart';
 import 'package:logbook_app_001/features/vision/vision_view.dart';
+import 'package:logbook_app_001/features/signature/signature_verification_view.dart';
 
 class LogView extends StatefulWidget {
   final String username;
@@ -259,8 +260,21 @@ class _LogViewState extends State<LogView> {
           ),
           IconButton(onPressed: () => Navigator.push(
             context, MaterialPageRoute
-            (builder: (context) => const VisionView())), 
-            icon: const Icon(Icons.camera))
+            (builder: (context) => const VisionView())),
+            icon: const Icon(Icons.camera)),
+          IconButton(
+            icon: const Icon(Icons.draw_rounded),
+            tooltip: 'Verifikasi Tanda Tangan',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => SignatureVerificationView(
+                  username: widget.username,
+                ),
+              ),
+            ),
+          ),
+
         ],
       ),
       body: ValueListenableBuilder<List<LogModel>>(
