@@ -54,18 +54,16 @@ class CounterController {
 
   // Decrement menggunakan step
   Future<void> decrement(String username) async {
-    if (_counter - _step >= 0) {
-      _counter = _step;
-    } else {
-      _counter = 0;
-    }
+    // subtract step but don't go below zero
+    _counter = _counter - _step;
+    if (_counter < 0) _counter = 0;
     _addHistory(username, "mengurangi nilai sebesar $_step");
 
     await saveCounter(username); // simpan counter ke data lokal
   }
 
   Future<void> reset(String username) async {
-    _counter = 1;
+    _counter = 0;
     _addHistory(username, "mereset counter");
 
     await saveCounter(username); // simpan counter ke data lokal
