@@ -91,7 +91,7 @@ class SignatureApiService {
   // Ganti IP ini sesuai IP komputer di jaringan yang sama saat testing di device
   // Untuk emulator Android: gunakan 10.0.2.2
   // Untuk device fisik: gunakan IP lokal komputer (misal 192.168.1.x)
-  static const String _baseUrl = 'http://192.168.137.1:8000';
+  static const String _baseUrl = 'http://192.168.137.62:8000';
 
   static final SignatureApiService _instance = SignatureApiService._internal();
   factory SignatureApiService() => _instance;

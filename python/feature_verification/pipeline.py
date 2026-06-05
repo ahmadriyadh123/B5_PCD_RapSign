@@ -15,6 +15,24 @@ from .constants import SUPPORTED_EXTENSIONS, DEFAULT_OUTPUT_SIZE
 from .models import SignatureFeatures, SignatureSample, VerificationResult
 from .extractor import SignatureFeatureExtractor
 from .cnn_model import SignatureCNN
+import torchvision.transforms as transforms
+
+
+class AugmentedDataset(torch.utils.data.Dataset):
+    def __init__(self, x_tensors: torch.Tensor, y_tensors: torch.Tensor, transform=None) -> None:
+        self.x = x_tensors
+        self.y = y_tensors
+        self.transform = transform
+
+    def __len__(self) -> int:
+        return len(self.x)
+
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        img = self.x[idx]
+        label = self.y[idx]
+        if self.transform:
+            img = self.transform(img)
+        return img, label
 
 
 class SignatureVerificationPipeline:
@@ -74,7 +92,17 @@ class SignatureVerificationPipeline:
         x = torch.stack([row.image_tensor for row in feature_rows])
         y = torch.tensor([self.label_to_idx[row.label] for row in feature_rows], dtype=torch.long)
         
-        dataset = torch.utils.data.TensorDataset(x, y)
+        # Apply online data augmentation to prevent overfitting
+        train_transform = transforms.Compose([
+            transforms.RandomRotation(degrees=10),
+            transforms.RandomAffine(
+                degrees=0,
+                translate=(0.05, 0.05),
+                scale=(0.95, 1.05)
+            ),
+        ])
+        
+        dataset = AugmentedDataset(x, y, transform=train_transform)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
         
         self.model.train()

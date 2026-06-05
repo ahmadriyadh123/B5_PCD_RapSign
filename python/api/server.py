@@ -112,10 +112,26 @@ def preprocess_to_contour(image_bytes: bytes) -> tuple[np.ndarray, np.ndarray, b
         # Gambar semua kontur dengan warna hijau
         cv2.drawContours(display, contours, -1, (0, 200, 80), 1)
 
-        # Gambar bounding box dari kontur terbesar
-        largest = max(contours, key=cv2.contourArea)
-        x, y, w, h = cv2.boundingRect(largest)
-        cv2.rectangle(display, (x, y), (x + w, y + h), (0, 140, 255), 2)
+        # Gambar bounding box gabungan dari kontur valid (> 50 area)
+        height, width = gray.shape[:2]
+        x_min, y_min = width, height
+        x_max, y_max = 0, 0
+        has_valid = False
+        for c in contours:
+            if cv2.contourArea(c) > 50:
+                x, y, w, h = cv2.boundingRect(c)
+                x_min = min(x_min, x)
+                y_min = min(y_min, y)
+                x_max = max(x_max, x + w)
+                y_max = max(y_max, y + h)
+                has_valid = True
+        
+        if has_valid:
+            cv2.rectangle(display, (x_min, y_min), (x_max, y_max), (0, 140, 255), 2)
+        else:
+            largest = max(contours, key=cv2.contourArea)
+            x, y, w, h = cv2.boundingRect(largest)
+            cv2.rectangle(display, (x, y), (x + w, y + h), (0, 140, 255), 2)
 
     # Encode ke PNG bytes
     _, buffer = cv2.imencode(".png", display)
