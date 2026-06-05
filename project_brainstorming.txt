@@ -1162,7 +1162,7 @@ Di akhir sesi, kelompok diharapkan memiliki:
 a. Problem Statement
 Masalah utama yang jelas.
 b. Diagram Pipeline
-Alur: Sensor → PCD → ML → UI.
+Alur:Sensor → PCD → ML → UI.
 c. Struktur Folder
 Pembagian arsitektur modular.
 d. Rencana Pipeline ML

@@ -34,9 +34,24 @@ class SignatureFeatureExtractor:
 
         contours, _ = cv2.findContours((contour_image > 0).astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         if contours:
-            largest = max(contours, key=cv2.contourArea)
-            x, y, w, h = cv2.boundingRect(largest)
-            bbox = (int(x), int(y), int(w), int(h))
+            height, width = contour_image.shape[:2]
+            x_min, y_min = width, height
+            x_max, y_max = 0, 0
+            has_valid = False
+            for c in contours:
+                if cv2.contourArea(c) > 50:
+                    x, y, w, h = cv2.boundingRect(c)
+                    x_min = min(x_min, x)
+                    y_min = min(y_min, y)
+                    x_max = max(x_max, x + w)
+                    y_max = max(y_max, y + h)
+                    has_valid = True
+            if has_valid:
+                bbox = (int(x_min), int(y_min), int(x_max - x_min), int(y_max - y_min))
+            else:
+                largest = max(contours, key=cv2.contourArea)
+                x, y, w, h = cv2.boundingRect(largest)
+                bbox = (int(x), int(y), int(w), int(h))
         else:
             height, width = contour_image.shape[:2]
             bbox = (0, 0, width, height)
@@ -81,9 +96,24 @@ class SignatureFeatureExtractor:
         # 3. Find bounding box
         contours, _ = cv2.findContours(contour_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         if contours:
-            largest = max(contours, key=cv2.contourArea)
-            x, y, w, h = cv2.boundingRect(largest)
-            bbox = (int(x), int(y), int(w), int(h))
+            height, width = contour_image.shape[:2]
+            x_min, y_min = width, height
+            x_max, y_max = 0, 0
+            has_valid = False
+            for c in contours:
+                if cv2.contourArea(c) > 50:
+                    x, y, w, h = cv2.boundingRect(c)
+                    x_min = min(x_min, x)
+                    y_min = min(y_min, y)
+                    x_max = max(x_max, x + w)
+                    y_max = max(y_max, y + h)
+                    has_valid = True
+            if has_valid:
+                bbox = (int(x_min), int(y_min), int(x_max - x_min), int(y_max - y_min))
+            else:
+                largest = max(contours, key=cv2.contourArea)
+                x, y, w, h = cv2.boundingRect(largest)
+                bbox = (int(x), int(y), int(w), int(h))
         else:
             height, width = contour_image.shape[:2]
             bbox = (0, 0, width, height)

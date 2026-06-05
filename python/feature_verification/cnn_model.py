@@ -11,10 +11,14 @@ class SignatureCNN(nn.Module):
         super(SignatureCNN, self).__init__()
         # Input: 1 channel (grayscale), output: 16 channels
         self.conv1 = nn.Conv2d(1, 16, kernel_size=3, stride=1, padding=1)
+        self.bn1 = nn.BatchNorm2d(16)
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
         
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
+        self.bn2 = nn.BatchNorm2d(32)
+        
         self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
+        self.bn3 = nn.BatchNorm2d(64)
         
         # Adaptive pooling ensures the output is always 4x4 regardless of input image size
         self.adaptive_pool = nn.AdaptiveAvgPool2d((4, 4))
@@ -27,9 +31,9 @@ class SignatureCNN(nn.Module):
 
     def forward(self, x):
         # x shape should be (batch_size, 1, height, width)
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = self.pool(F.relu(self.conv3(x)))
+        x = self.pool(F.relu(self.bn1(self.conv1(x))))
+        x = self.pool(F.relu(self.bn2(self.conv2(x))))
+        x = self.pool(F.relu(self.bn3(self.conv3(x))))
         
         x = self.adaptive_pool(x)
         x = torch.flatten(x, 1)
