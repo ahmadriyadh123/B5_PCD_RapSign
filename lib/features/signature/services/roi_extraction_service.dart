@@ -93,43 +93,66 @@ class RoiExtractionService {
     return RoiCropResult(image: cropped, x: startX, y: bestStart, width: cropW, height: docH);
   }
 
-  /// Scan dari bawah ke atas menggunakan input hasil crop sebelumnya.
+  /// Scan dan temukan blok tanda tangan menggunakan Horizontal Projection Profile.
+  /// Metode ini lebih tangguh terhadap teks footer atau noise kecil di bagian bawah.
   RoiCropResult detectInkFromBottom(RoiCropResult docCrop) {
     final source = docCrop.image;
     final w = source.width;
     final h = source.height;
     final grayscale = img.grayscale(source);
 
-    int inkBottomY = -1;
-    int inkTopY = -1;
-    int inkLeftX = w;
-    int inkRightX = 0;
-    int gapCount = 0;
-    bool foundFirstBlock = false;
-
-    // Scan dari bawah ke atas
-    for (int y = h - 1; y >= 0; y--) {
-      int inkCount = 0;
+    // 1. Horizontal Projection: Hitung tinta per baris
+    final rowInkCount = List.filled(h, 0);
+    for (int y = 0; y < h; y++) {
       for (int x = 0; x < w; x++) {
         if (img.getLuminance(grayscale.getPixel(x, y)).toInt() < _inkThreshold) {
-          inkCount++;
+          rowInkCount[y]++;
         }
-      }
-      if (inkCount >= _minInkPixelsPerRow) {
-        if (inkBottomY == -1) inkBottomY = y;
-        inkTopY = y;
-        if (gapCount > 0) foundFirstBlock = true;
-        gapCount = 0;
-      } else {
-        if (inkBottomY != -1) gapCount++;
-        if (foundFirstBlock && gapCount > 30) break;
-        if (!foundFirstBlock && gapCount > 80) break;
       }
     }
 
-    if (inkBottomY == -1) return docCrop; // Kembalikan docCrop asli jika tidak ketemu
+    // 2. Segmentasi menjadi blok-blok kandidat
+    List<({int top, int bottom, int height})> candidates = [];
+    int? startY;
+    for (int y = 0; y < h; y++) {
+      if (rowInkCount[y] >= _minInkPixelsPerRow) {
+        startY ??= y;
+      } else {
+        if (startY != null) {
+          final blockHeight = y - startY;
+          // Filter: Tanda tangan biasanya memiliki tinggi yang signifikan (> 30px)
+          // Teks footer atau garis biasanya sangat tipis.
+          if (blockHeight > 25) {
+            candidates.add((top: startY, bottom: y - 1, height: blockHeight));
+          }
+          startY = null;
+        }
+      }
+    }
 
-    // Cari batas horizontal
+    // Jika scan selesai dan masih ada blok yang menggantung
+    if (startY != null) {
+      final blockHeight = h - startY;
+      if (blockHeight > 25) {
+        candidates.add((top: startY, bottom: h - 1, height: blockHeight));
+      }
+    }
+
+    if (candidates.isEmpty) {
+      // Jika tidak ada blok besar, coba cari yang kecil (mungkin tanda tangan kecil)
+      // atau kembalikan dokumen asli jika benar-benar kosong.
+      return docCrop;
+    }
+
+    // 3. Pemilihan Kandidat: Ambil yang paling bawah yang memenuhi kriteria
+    // Karena biasanya tanda tangan ada di bagian bawah area dokumen.
+    final bestBlock = candidates.last;
+    int inkTopY = bestBlock.top;
+    int inkBottomY = bestBlock.bottom;
+
+    // 4. Cari batas horizontal (kiri-kanan) hanya pada blok terpilih
+    int inkLeftX = w;
+    int inkRightX = 0;
     for (int y = inkTopY; y <= inkBottomY; y++) {
       for (int x = 0; x < w; x++) {
         if (img.getLuminance(grayscale.getPixel(x, y)).toInt() < _inkThreshold) {
@@ -139,7 +162,10 @@ class RoiExtractionService {
       }
     }
 
-    // Padding
+    // Jika tidak ditemukan tinta secara horizontal (kasus langka)
+    if (inkLeftX > inkRightX) return docCrop;
+
+    // 5. Padding & Cropping
     const padding = 20;
     inkTopY = (inkTopY - padding).clamp(0, h - 1);
     inkBottomY = (inkBottomY + padding).clamp(0, h - 1);
@@ -157,7 +183,6 @@ class RoiExtractionService {
       height: cropHeight,
     );
 
-    // Mengakumulasi koordinat untuk mendapatkan posisi absolut di original frame
     return RoiCropResult(
       image: cropped,
       x: docCrop.x + inkLeftX,
