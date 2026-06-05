@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logbook_app_001/features/logbook/log_view.dart';
 import 'package:logbook_app_001/features/legalitas/legalitas_view.dart';
-// import 'package:logbook_app_001/features/signature/signature_preprocessing_view.dart';
 import 'package:logbook_app_001/features/signature/signature_verification_view.dart';
 
 class HomePage extends StatefulWidget {
@@ -34,7 +33,8 @@ class _HomePageState extends State<HomePage> {
     ];
   }
 
-  // Ini adalah bagian yang berisi tombol navigasi di bagian bawah layar. Kita menggunakan BottomNavigationBar untuk memungkinkan pengguna beralih antara tiga halaman utama: Logbook, Legalitas, dan Tanda Tangan. Setiap item pada BottomNavigationBar memiliki ikon dan label yang sesuai dengan fungsinya. Ketika pengguna mengetuk salah satu item, kita memperbarui _currentIndex untuk menampilkan halaman yang sesuai di IndexedStack.
+  // Bottom navigation has two main tabs: Logbook and Legalitas.
+  // The third icon is a direct action button that opens the signature verification flow.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
