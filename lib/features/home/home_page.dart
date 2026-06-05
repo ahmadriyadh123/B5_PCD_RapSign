@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:logbook_app_001/features/logbook/log_view.dart';
 import 'package:logbook_app_001/features/legalitas/legalitas_view.dart';
-import 'package:logbook_app_001/features/signature/signature_preprocessing_view.dart';
+// import 'package:logbook_app_001/features/signature/signature_preprocessing_view.dart';
+import 'package:logbook_app_001/features/signature/signature_verification_view.dart';
 
 class HomePage extends StatefulWidget {
   final String username;
@@ -30,17 +31,28 @@ class _HomePageState extends State<HomePage> {
     _pages = [
       LogView(username: widget.username, teamId: widget.teamId, role: widget.role),
       const LegalitasView(),
-      const SignaturePreprocessingView(),
     ];
   }
 
+  // Ini adalah bagian yang berisi tombol navigasi di bagian bawah layar. Kita menggunakan BottomNavigationBar untuk memungkinkan pengguna beralih antara tiga halaman utama: Logbook, Legalitas, dan Tanda Tangan. Setiap item pada BottomNavigationBar memiliki ikon dan label yang sesuai dengan fungsinya. Ketika pengguna mengetuk salah satu item, kita memperbarui _currentIndex untuk menampilkan halaman yang sesuai di IndexedStack.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        onTap: (index) {
+          if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => SignatureVerificationView(username: widget.username),
+              ),
+            );
+            return;
+          }
+          setState(() => _currentIndex = index);
+        },
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.book),
@@ -51,8 +63,8 @@ class _HomePageState extends State<HomePage> {
             label: 'Legalitas',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.draw),
-            label: 'Tanda Tangan',
+            icon: Icon(Icons.draw_rounded),
+            label: 'Verifikasi',
           ),
         ],
       ),

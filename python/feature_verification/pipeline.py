@@ -12,6 +12,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
 
 from .constants import SUPPORTED_EXTENSIONS, DEFAULT_OUTPUT_SIZE
+import joblib
 from .models import SignatureFeatures, SignatureSample, VerificationResult
 from .extractor import SignatureFeatureExtractor
 from .cnn_model import SignatureCNN
@@ -152,21 +153,37 @@ class SignatureVerificationPipeline:
 
     @classmethod
     def load(cls, path: Path) -> "SignatureVerificationPipeline":
-        payload = torch.load(path, map_location="cpu", weights_only=False)
-        
+        # Try loading a torch-saved payload first; if that fails, try joblib.
+        try:
+            payload = torch.load(path, map_location="cpu", weights_only=False)
+        except Exception:
+            # fallback: try joblib (some saved artifacts may be joblib/pickle)
+            try:
+                payload = joblib.load(path)
+            except Exception as e:
+                raise RuntimeError(f"Failed to load model file '{path}': {e}")
+
+        # If the payload is already a SignatureVerificationPipeline instance, return it
+        if isinstance(payload, SignatureVerificationPipeline):
+            return payload
+
+        # payload should be a dict-like structure with expected keys
         pipeline = cls(
             output_size=int(payload.get("output_size", DEFAULT_OUTPUT_SIZE)),
             embedding_dim=int(payload.get("embedding_dim", 128))
         )
-        pipeline.model = SignatureCNN(embedding_dim=pipeline.embedding_dim)
-        pipeline.model.load_state_dict(payload["model_state_dict"])
-        pipeline.model.eval()
-        pipeline.model.to(pipeline.device)
-        
+
+        # If model state dict available, reconstruct model
+        if "model_state_dict" in payload:
+            pipeline.model = SignatureCNN(embedding_dim=pipeline.embedding_dim)
+            pipeline.model.load_state_dict(payload["model_state_dict"])
+            pipeline.model.eval()
+            pipeline.model.to(pipeline.device)
+
         pipeline.class_prototypes = payload.get("class_prototypes", {})
         pipeline.label_to_idx = payload.get("label_to_idx", {})
         pipeline.idx_to_label = payload.get("idx_to_label", {})
-        
+
         return pipeline
 
     def infer(self, contour_image_path: Path, feature_ready_image_path: Path, enrolled_label: Optional[str] = None, threshold: float = 0.75) -> VerificationResult:

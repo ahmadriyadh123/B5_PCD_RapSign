@@ -209,6 +209,7 @@ class _LogViewState extends State<LogView> {
     super.dispose();
   }
 
+  // Ini adalah bagian tombol yang berada di sisi kanan atas, yang berfungsi untuk membuka kamera dan verifikasi tanda tangan. Kita menggunakan IconButton dengan ikon kamera dan draw_rounded untuk membedakan fungsi keduanya. Ketika tombol kamera ditekan, kita navigasi ke VisionView, sedangkan tombol draw_rounded akan membuka SignatureVerificationView dengan membawa username sebagai parameter.
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -258,10 +259,6 @@ class _LogViewState extends State<LogView> {
             icon: const Icon(Icons.logout),
             onPressed: _confirmLogout,
           ),
-          IconButton(onPressed: () => Navigator.push(
-            context, MaterialPageRoute
-            (builder: (context) => const VisionView())),
-            icon: const Icon(Icons.camera)),
           IconButton(
             icon: const Icon(Icons.draw_rounded),
             tooltip: 'Verifikasi Tanda Tangan',

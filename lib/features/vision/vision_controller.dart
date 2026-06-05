@@ -465,7 +465,17 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> processCapturedFrame() async {
     final sourceBytes = capturedImageBytes;
-    if (sourceBytes == null || isProcessing) {
+    if (isProcessing) {
+      return;
+    }
+
+    if (sourceBytes == null) {
+      processMessage = 'Belum ada gambar. Tekan Capture dulu.';
+      _similarityScore = 0.0;
+      _isSignatureValid = false;
+      if (!_isDisposed) {
+        notifyListeners();
+      }
       return;
     }
 

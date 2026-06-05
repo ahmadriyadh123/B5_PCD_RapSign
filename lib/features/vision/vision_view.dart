@@ -802,9 +802,7 @@ class _VisionViewState extends State<VisionView> with TickerProviderStateMixin {
           Expanded(
             child: Align(
               alignment: Alignment.centerRight,
-              child: _workspaceMode == VisionWorkspaceMode.camera
-                  ? _buildFilterDropdown()
-                  : _buildVerifyAction(),
+              child: _buildFilterDropdown(),
             ),
           ),
         ],
@@ -814,13 +812,12 @@ class _VisionViewState extends State<VisionView> with TickerProviderStateMixin {
 
   Widget _buildVerifyAction() {
     final isProcessing = _visionController.isProcessing;
-    final hasImage = _visionController.hasCapturedImage;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         // Result badge
-        if (hasImage)
+        if (_visionController.hasCapturedImage)
           Container(
             margin: const EdgeInsets.only(right: 10),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -863,7 +860,7 @@ class _VisionViewState extends State<VisionView> with TickerProviderStateMixin {
           ),
 
         GestureDetector(
-          onTap: (!hasImage || isProcessing)
+          onTap: isProcessing
               ? null
               : () async {
                   // trigger integrated check
@@ -872,12 +869,12 @@ class _VisionViewState extends State<VisionView> with TickerProviderStateMixin {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: (!hasImage || isProcessing)
+              color: isProcessing
                   ? Colors.white12
                   : _Tokens.mutedGold.withValues(alpha: 0.16),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: (!hasImage || isProcessing)
+                color: isProcessing
                     ? _Tokens.glassStroke
                     : _Tokens.mutedGold.withValues(alpha: 0.55),
               ),
@@ -887,17 +884,13 @@ class _VisionViewState extends State<VisionView> with TickerProviderStateMixin {
                 Icon(
                   Icons.verified_rounded,
                   size: 18,
-                  color: (!hasImage || isProcessing)
-                      ? Colors.white54
-                      : _Tokens.mutedGold,
+                  color: isProcessing ? Colors.white54 : _Tokens.mutedGold,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   isProcessing ? 'Verifying...' : 'Verify',
                   style: TextStyle(
-                    color: (!hasImage || isProcessing)
-                        ? Colors.white54
-                        : _Tokens.mutedGold,
+                    color: isProcessing ? Colors.white54 : _Tokens.mutedGold,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
