@@ -259,19 +259,6 @@ class _LogViewState extends State<LogView> {
             icon: const Icon(Icons.logout),
             onPressed: _confirmLogout,
           ),
-          IconButton(
-            icon: const Icon(Icons.draw_rounded),
-            tooltip: 'Verifikasi Tanda Tangan',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => SignatureVerificationView(
-                  username: widget.username,
-                ),
-              ),
-            ),
-          ),
-
         ],
       ),
       body: ValueListenableBuilder<List<LogModel>>(

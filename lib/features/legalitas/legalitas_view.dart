@@ -5,9 +5,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
 
 import '../signature/services/preprocessing_pipeline.dart';
+import '../signature/signature_verification_view.dart';
 
 class LegalitasView extends StatefulWidget {
-  const LegalitasView({super.key});
+  final String username;
+
+  const LegalitasView({super.key, required this.username});
 
   @override
   State<LegalitasView> createState() => _LegalitasViewState();
@@ -65,6 +68,24 @@ class _LegalitasViewState extends State<LegalitasView> {
     return Scaffold(
       appBar: AppBar(title: const Text('Legalitas')),
       body: _buildBody(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: _result != null
+          ? FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SignatureVerificationView(
+                      username: widget.username,
+                    ),
+                  ),
+                );
+              },
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Colors.white,
+              child: const Icon(Icons.draw_rounded),
+            )
+          : null,
     );
   }
 
@@ -117,7 +138,7 @@ class _LegalitasViewState extends State<LegalitasView> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           child: Row(
             children: [
               Expanded(child: OutlinedButton.icon(

@@ -29,7 +29,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _pages = [
       LogView(username: widget.username, teamId: widget.teamId, role: widget.role),
-      const LegalitasView(),
+      LegalitasView(username: widget.username),
     ];
   }
 
