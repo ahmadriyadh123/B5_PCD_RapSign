@@ -39,7 +39,7 @@ void main() {
         // The print output is used to compare the full pipeline versus the ink-only path.
         // ignore: avoid_print
         print(
-          '${label}/$fileName | full=[${result.boundingBoxX}, ${result.boundingBoxY}, ${result.boundingBoxWidth}, ${result.boundingBoxHeight}] | inkOnly=${inkOnly == null ? 'decode_error' : '[${inkOnly.x}, ${inkOnly.y}, ${inkOnly.width}, ${inkOnly.height}]'} | python=$pythonBox',
+          '$label/$fileName | full=[${result.boundingBoxX}, ${result.boundingBoxY}, ${result.boundingBoxWidth}, ${result.boundingBoxHeight}] | inkOnly=${inkOnly == null ? 'decode_error' : '[${inkOnly.x}, ${inkOnly.y}, ${inkOnly.width}, ${inkOnly.height}]'} | python=$pythonBox',
         );
       }
     }

@@ -167,7 +167,9 @@ class SegmentationService {
     }
 
     double sumAll = 0;
-    for (int i = 0; i < 256; i++) sumAll += i * histogram[i];
+    for (int i = 0; i < 256; i++) {
+      sumAll += i * histogram[i];
+    }
 
     double sumB = 0;
     int wB = 0;

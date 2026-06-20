@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:logbook_app_001/features/logbook/counter_controller.dart';
 
 void main() {
-  var actual, expected;
+  int actual, expected;
 
   group('Module 1 - CounterController (with storage & step)', () {
     late CounterController controller;

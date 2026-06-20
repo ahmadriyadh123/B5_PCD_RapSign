@@ -8,8 +8,6 @@ import 'package:logbook_app_001/features/logbook/models/log_model.dart';
 import 'package:logbook_app_001/helpers/log_helper.dart';
 import 'package:logbook_app_001/services/access_policy.dart';
 import 'package:logbook_app_001/services/mongo_service.dart';
-import 'package:logbook_app_001/features/vision/vision_view.dart';
-import 'package:logbook_app_001/features/signature/signature_verification_view.dart';
 
 class LogView extends StatefulWidget {
   final String username;

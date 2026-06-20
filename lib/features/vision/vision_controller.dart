@@ -532,8 +532,8 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
       // Panggil InferenceService untuk melakukan verifikasi ke server ML
       try {
         final InferenceService inference;
-        if (this.inferenceService != null) {
-          inference = this.inferenceService!;
+        if (inferenceService != null) {
+          inference = inferenceService!;
         } else {
           final baseUrl = (dotenv.isInitialized ? (dotenv.env['INFER_BASE_URL'] ?? 'http://127.0.0.1:8000') : 'http://127.0.0.1:8000');
           inference = InferenceService(baseUrl: baseUrl);
